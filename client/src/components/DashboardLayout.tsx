@@ -21,15 +21,17 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Calculator, History, BookOpen, Scale } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: LayoutDashboard, label: "Painel Principal", path: "/" },
+  { icon: Calculator, label: "Calculadora TCR", path: "/calculadora" },
+  { icon: History, label: "Histórico", path: "/historico" },
+  { icon: BookOpen, label: "Fundamentação Legal", path: "/fundamentacao" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -170,8 +172,9 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold tracking-tight truncate">
-                    Navigation
+                  <Scale className="h-4 w-4 text-accent shrink-0" />
+                  <span className="font-semibold tracking-tight truncate text-sidebar-foreground text-sm">
+                    Juros Rural
                   </span>
                 </div>
               ) : null}
