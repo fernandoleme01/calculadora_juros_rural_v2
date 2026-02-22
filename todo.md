@@ -127,3 +127,23 @@
 - [x] Frontend: bloqueio PDF/impressão para plano Free
 - [x] Frontend: banner de upgrade para usuários Free
 - [x] Landing page: adicionar plano Free (1 laudo, sem PDF)
+
+## Integração Stripe — Cobrança de Assinaturas
+- [x] Ativar feature Stripe no projeto (webdev_add_feature)
+- [x] Configurar chaves STRIPE_SECRET_KEY e STRIPE_WEBHOOK_SECRET
+- [x] Backend: criar produtos e preços no Stripe (Standard/Premium/Supreme mensal e anual)
+- [x] Backend: rota tRPC para criar sessão de checkout do Stripe
+- [x] Backend: webhook Stripe para atualizar plano após pagamento confirmado
+- [x] Backend: rota tRPC para criar portal do cliente (gerenciar assinatura)
+- [x] Backend: rota tRPC para cancelar assinatura
+- [x] Schema: adicionar campo stripeCustomerId e stripeSubscriptionId na tabela users
+- [x] Frontend: página de assinatura com cards de planos e botão de checkout
+- [x] Frontend: redirecionamento após pagamento bem-sucedido
+- [x] Frontend: botão "Gerenciar Assinatura" no dashboard para usuários pagos
+- [x] Frontend: exibir status da assinatura (ativa, cancelada, expirada)
+- [x] Painel Admin: exibir stripeCustomerId e status de assinatura por usuário
+- [x] Testes vitest para lógica de webhook e atualização de plano
+
+## Tradução da Interface
+- [x] DashboardLayout: traduzir tela de login para português
+- [x] DashboardLayout: traduzir botão "Sign out" para "Sair"

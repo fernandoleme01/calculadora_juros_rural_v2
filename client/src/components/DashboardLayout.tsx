@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Calculator, History, BookOpen, Scale, FileSearch, Landmark, Gavel, Shield } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Calculator, History, BookOpen, Scale, FileSearch, Landmark, Gavel, Shield, CreditCard } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -35,6 +35,7 @@ const menuItems = [
   { icon: Landmark, label: "Dados do BCB", path: "/app/dados-bcb" },
   { icon: History, label: "Histórico", path: "/app/historico" },
   { icon: BookOpen, label: "Fundamentação Legal", path: "/app/fundamentacao" },
+  { icon: CreditCard, label: "Minha Assinatura", path: "/app/assinatura" },
 ];
 
 // Item de menu exclusivo para administradores
@@ -69,12 +70,22 @@ export default function DashboardLayout({
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
           <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
-              Sign in to continue
-            </h1>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to this dashboard requires authentication. Continue to launch the login flow.
-            </p>
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Scale className="h-7 w-7 text-primary" />
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight text-center" style={{fontFamily: 'Merriweather, serif'}}>
+                JurosRurais.pro
+              </h1>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <h2 className="text-lg font-semibold text-center">
+                Acesse sua conta
+              </h2>
+              <p className="text-sm text-muted-foreground text-center max-w-sm">
+                Esta área requer autenticação. Clique abaixo para entrar ou criar sua conta gratuitamente.
+              </p>
+            </div>
           </div>
           <Button
             onClick={() => {
@@ -254,7 +265,7 @@ function DashboardLayoutContent({
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
+                  <span>Sair</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

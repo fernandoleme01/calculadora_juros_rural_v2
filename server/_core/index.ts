@@ -9,6 +9,8 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { processarContratoRural } from "../analisadorContrato";
+import { processarWebhookEvento } from "../stripeService";
+import { atualizarPlanoStripe } from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -32,6 +34,33 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
+  // ─── Webhook Stripe (DEVE vir ANTES do express.json) ─────────────────────
+  app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    const signature = req.headers["stripe-signature"] as string;
+    if (!signature) {
+      res.status(400).json({ error: "Assinatura Stripe ausente" });
+      return;
+    }
+    try {
+      const resultado = await processarWebhookEvento(req.body as Buffer, signature);
+      if (resultado && resultado.userId && resultado.planoId) {
+        await atualizarPlanoStripe({
+          userId: resultado.userId,
+          planoId: resultado.planoId as "free" | "standard" | "premium" | "supreme" | "admin",
+          stripeCustomerId: resultado.stripeCustomerId,
+          stripeSubscriptionId: resultado.stripeSubscriptionId,
+        });
+        console.log(`[Stripe Webhook] Plano atualizado: userId=${resultado.userId} → ${resultado.planoId}`);
+      }
+      res.json({ received: true });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erro no webhook";
+      console.error("[Stripe Webhook] Erro:", msg);
+      res.status(400).json({ error: msg });
+    }
+  });
+
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));

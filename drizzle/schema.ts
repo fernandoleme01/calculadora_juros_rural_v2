@@ -18,9 +18,12 @@ export const users = mysqlTable("users", {
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   // Campos SaaS
-  plano: mysqlEnum("plano", ["standard", "premium", "supreme", "admin"]).default("standard").notNull(),
+  plano: mysqlEnum("plano", ["free", "standard", "premium", "supreme", "admin"]).default("free").notNull(),
   planoExpiracao: timestamp("planoExpiracao"),
   calculosRealizados: int("calculosRealizados").default(0).notNull(),
+  // Campos Stripe
+  stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 128 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

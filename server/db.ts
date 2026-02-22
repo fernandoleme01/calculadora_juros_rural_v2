@@ -252,3 +252,48 @@ export async function getEstatisticasAdmin() {
     receitaEstimadaReais: receitaEstimada / 100,
   };
 }
+
+/** Atualiza o plano do usuário após confirmação de pagamento pelo Stripe */
+export async function atualizarPlanoStripe(params: {
+  userId: number;
+  planoId: "free" | "standard" | "premium" | "supreme" | "admin";
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+}): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const updateData: Record<string, unknown> = {
+    plano: params.planoId,
+    calculosRealizados: 0, // Zera o contador ao ativar novo plano
+  };
+
+  if (params.stripeCustomerId) {
+    updateData.stripeCustomerId = params.stripeCustomerId;
+  }
+  if (params.stripeSubscriptionId) {
+    updateData.stripeSubscriptionId = params.stripeSubscriptionId;
+  }
+
+  // Define expiração para planos pagos (30 dias a partir de hoje para mensal)
+  if (params.planoId !== "free") {
+    const expiracao = new Date();
+    expiracao.setMonth(expiracao.getMonth() + 1);
+    updateData.planoExpiracao = expiracao;
+  } else {
+    updateData.planoExpiracao = null;
+  }
+
+  await db.update(users)
+    .set(updateData as Parameters<typeof db.update>[0] extends { set: infer S } ? S : never)
+    .where(eq(users.id, params.userId));
+}
+
+/** Atualiza apenas os IDs Stripe do usuário (stripeCustomerId) */
+export async function salvarStripeCustomerId(userId: number, stripeCustomerId: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users)
+    .set({ stripeCustomerId })
+    .where(eq(users.id, userId));
+}

@@ -14,6 +14,7 @@ import AnalisarContrato from "./pages/AnalisarContrato";
 import DadosBCB from "./pages/DadosBCB";
 import GeradorPeticao from "./pages/GeradorPeticao";
 import PainelAdmin from "./pages/PainelAdmin";
+import Assinatura from "./pages/Assinatura";
 import DashboardLayout from "./components/DashboardLayout";
 
 // Rotas públicas (sem autenticação, sem DashboardLayout)
@@ -39,6 +40,8 @@ function DashboardRoutes() {
         <Route path="/app/dados-bcb" component={DadosBCB} />
         <Route path="/app/gerador-peticao" component={GeradorPeticao} />
         <Route path="/app/admin" component={PainelAdmin} />
+        <Route path="/app/assinatura" component={Assinatura} />
+        <Route path="/app/assinatura/sucesso" component={Assinatura} />
         <Route component={NotFound} />
       </Switch>
     </DashboardLayout>

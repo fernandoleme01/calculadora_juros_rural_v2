@@ -29,6 +29,9 @@ import {
 } from "./calculoTcr";
 import { invokeLLM } from "./_core/llm";
 import { buscarDadosBCB, buscarIPCAMensal } from "./bancoCentral";
+import { criarSessaoCheckout, criarPortalCliente, obterOuCriarCustomer } from "./stripeService";
+import { salvarStripeCustomerId } from "./db";
+import { PRODUTOS, type PlanoId } from "./stripeProducts";
 import {
   gerarLaudoTecnicoJuridico,
   gerarPeticaoRevisaoContratual,
@@ -424,6 +427,70 @@ Fundamente o parecer na Lei nº 4.829/65, Decreto-Lei nº 167/67, Decreto nº 22
         await resetarLaudosUsuario(input.userId);
         return { success: true };
       }),
+  }),
+
+  // ─── Assinatura Stripe ─────────────────────────────────────────────────────
+  assinatura: router({
+
+    // Cria sessão de checkout para assinar um plano
+    criarCheckout: protectedProcedure
+      .input(z.object({
+        planoId: z.enum(['standard', 'premium', 'supreme']),
+        periodicidade: z.enum(['mensal', 'anual']),
+        origin: z.string().url(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { url, customerId } = await criarSessaoCheckout({
+          userId: ctx.user.id,
+          email: ctx.user.email,
+          nome: ctx.user.name,
+          stripeCustomerId: (ctx.user as Record<string, unknown>).stripeCustomerId as string | null,
+          planoId: input.planoId as PlanoId,
+          periodicidade: input.periodicidade,
+          origin: input.origin,
+        });
+        // Salvar customerId se for novo
+        if (customerId && !(ctx.user as Record<string, unknown>).stripeCustomerId) {
+          await salvarStripeCustomerId(ctx.user.id, customerId);
+        }
+        return { url };
+      }),
+
+    // Abre o portal do cliente Stripe para gerenciar assinatura
+    abrirPortal: protectedProcedure
+      .input(z.object({ origin: z.string().url() }))
+      .mutation(async ({ input, ctx }) => {
+        const stripeCustomerId = (ctx.user as Record<string, unknown>).stripeCustomerId as string | null;
+        if (!stripeCustomerId) {
+          // Criar customer se não existir
+          const customerId = await obterOuCriarCustomer(
+            ctx.user.id,
+            ctx.user.email,
+            ctx.user.name,
+            null
+          );
+          await salvarStripeCustomerId(ctx.user.id, customerId);
+          const url = await criarPortalCliente({ stripeCustomerId: customerId, origin: input.origin });
+          return { url };
+        }
+        const url = await criarPortalCliente({ stripeCustomerId, origin: input.origin });
+        return { url };
+      }),
+
+    // Retorna os planos disponíveis com preços
+    planos: publicProcedure.query(() => {
+      return Object.values(PRODUTOS).map(p => ({
+        id: p.planoId,
+        nome: p.nome,
+        descricao: p.descricao,
+        laudosPorMes: p.laudosPorMes,
+        precoMensal: p.precoMensal,
+        precoAnual: p.precoAnual,
+        precoMensalReais: p.precoMensal / 100,
+        precoAnualReais: p.precoAnual / 100,
+        precoMensalAnualizadoReais: (p.precoAnual / 100) / 12,
+      }));
+    }),
   }),
 
   // ─── Histórico ────────────────────────────────────────────────────────────
