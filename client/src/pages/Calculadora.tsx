@@ -13,8 +13,9 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calculator, Info, AlertTriangle, Plus, Trash2 } from "lucide-react";
+import { Calculator, Info, AlertTriangle, Plus, Trash2, FileText } from "lucide-react";
 import { toast } from "sonner";
+import UploadContratoPDF, { type DadosExtradosPDF } from "@/components/UploadContratoPDF";
 
 const formSchema = z.object({
   nomeDevedor: z.string().optional(),
@@ -33,6 +34,12 @@ const formSchema = z.object({
   fatorInflacaoImplicita: z.coerce.number().optional(),
   fatorPrograma: z.coerce.number().optional(),
   fatorAjuste: z.coerce.number().default(0),
+  // Parcelas pagas
+  numeroParcelas: z.coerce.number().int().positive().optional(),
+  parcelasPagas: z.coerce.number().int().min(0).optional(),
+  valorParcelaPaga: z.coerce.number().positive().optional(),
+  saldoDevedorBanco: z.coerce.number().positive().optional(),
+  periodicidadeParcela: z.enum(["mensal", "anual"]).default("anual"),
   salvar: z.boolean().default(true),
 });
 
@@ -50,6 +57,10 @@ export default function Calculadora() {
   const [ipcaMensal, setIpcaMensal] = useState<number[]>([]);
   const [novoIpca, setNovoIpca] = useState("");
   const [tipoTaxaSelecionada, setTipoTaxaSelecionada] = useState<"pre_fixada" | "pos_fixada">("pos_fixada");
+  const [mostrarUpload, setMostrarUpload] = useState(false);
+  const [pdfExtraido, setPdfExtraido] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [mostrarParcelas, setMostrarParcelas] = useState(false);
 
   const { data: limites } = trpc.tcr.limitesLegais.useQuery();
 
@@ -113,6 +124,46 @@ export default function Calculadora() {
   const limiteRemExcedido = taxaRem > (limites?.jurosRemuneratoriosMaxAA ?? 12);
   const limiteMoraExcedido = taxaMora > (limites?.jurosMoraMaxAA ?? 1);
 
+  // Mapeamento de modalidade do PDF para o enum do formulário
+  const mapModalidade = (m: string | null): "custeio" | "investimento" | "comercializacao" => {
+    if (!m) return "custeio";
+    if (m.includes("custeio")) return "custeio";
+    if (m.includes("investimento")) return "investimento";
+    if (m.includes("comercializacao") || m.includes("comercialização")) return "comercializacao";
+    return "custeio";
+  };
+
+  // Converte data DD/MM/AAAA para YYYY-MM-DD
+  const parseDataBR = (d: string | null): string => {
+    if (!d) return "";
+    const parts = d.split("/");
+    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    return d;
+  };
+
+  const handleDadosExtraidos = (dados: DadosExtradosPDF, url: string) => {
+    setPdfUrl(url);
+    setPdfExtraido(true);
+    setMostrarUpload(false);
+    // Pré-preencher campos do formulário
+    if (dados.nomeDevedor) setValue("nomeDevedor", dados.nomeDevedor);
+    if (dados.numeroCedula) setValue("numeroCedula", dados.numeroCedula);
+    if (dados.valorPrincipal) setValue("valorPrincipal", dados.valorPrincipal);
+    if (dados.prazoMeses) setValue("prazoMeses", dados.prazoMeses);
+    if (dados.taxaJurosAnual) setValue("taxaJurosRemuneratorios", dados.taxaJurosAnual);
+    if (dados.dataContratacao) setValue("dataContratacao", parseDataBR(dados.dataContratacao));
+    if (dados.dataVencimento) setValue("dataVencimento", parseDataBR(dados.dataVencimento));
+    setValue("modalidade", mapModalidade(dados.modalidade));
+    // Detectar tipo de taxa pelo indexador
+    if (dados.indexador === "prefixado") {
+      setTipoTaxaSelecionada("pre_fixada");
+      setValue("tipoTaxa", "pre_fixada");
+    } else {
+      setTipoTaxaSelecionada("pos_fixada");
+      setValue("tipoTaxa", "pos_fixada");
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
@@ -124,6 +175,45 @@ export default function Calculadora() {
           Preencha os dados do financiamento para calcular a Taxa de Custo Real (TCR) com fundamentação legal.
         </p>
       </div>
+
+      {/* Botão de importar PDF */}
+      {!pdfExtraido && !mostrarUpload && (
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-primary/40 bg-primary/5">
+          <FileText className="h-5 w-5 text-primary shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium">Tem o contrato em PDF?</p>
+            <p className="text-xs text-muted-foreground">A IA extrai os dados automaticamente e preenche o formulário</p>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={() => setMostrarUpload(true)}>
+            <FileText className="h-3 w-3 mr-1" /> Importar PDF
+          </Button>
+        </div>
+      )}
+
+      {mostrarUpload && (
+        <UploadContratoPDF
+          onDadosExtraidos={handleDadosExtraidos}
+          onFechar={() => setMostrarUpload(false)}
+        />
+      )}
+
+      {pdfExtraido && (
+        <Alert className="border-green-200 bg-green-50">
+          <FileText className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-sm text-green-700">
+            <strong>Contrato importado via PDF.</strong> Os campos abaixo foram pré-preenchidos pela IA — revise antes de calcular.
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="ml-2 h-6 text-xs text-green-700 hover:text-green-900"
+              onClick={() => { setPdfExtraido(false); setPdfUrl(null); setMostrarUpload(true); }}
+            >
+              Trocar PDF
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Identificação */}
@@ -377,6 +467,76 @@ export default function Calculadora() {
             </AlertDescription>
           </Alert>
         )}
+
+        {/* Seção de Parcelas Pagas */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Análise de Parcelas Pagas</CardTitle>
+                <CardDescription>
+                  Opcional — informe as parcelas já pagas para calcular o excesso cobrado e o saldo devedor revisado
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setMostrarParcelas(!mostrarParcelas)}
+              >
+                {mostrarParcelas ? "Ocultar" : "Incluir Parcelas"}
+              </Button>
+            </div>
+          </CardHeader>
+          {mostrarParcelas && (
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="numeroParcelas">Nº Total de Parcelas do Contrato</Label>
+                <Input id="numeroParcelas" type="number" placeholder="Ex: 5" {...register("numeroParcelas")} />
+                <p className="text-xs text-muted-foreground">Total previsto no contrato (safras ou meses)</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="parcelasPagas">Nº de Parcelas Efetivamente Pagas</Label>
+                <Input id="parcelasPagas" type="number" placeholder="Ex: 3" {...register("parcelasPagas")} />
+                <p className="text-xs text-muted-foreground">Quantas parcelas já foram quitadas</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="valorParcelaPaga">Valor Médio da Parcela Paga (R$)</Label>
+                <Input id="valorParcelaPaga" type="number" step="0.01" placeholder="Ex: 25000.00" {...register("valorParcelaPaga")} />
+                <p className="text-xs text-muted-foreground">Valor efetivamente cobrado pelo banco por parcela</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="saldoDevedorBanco">Saldo Devedor Informado pelo Banco (R$)</Label>
+                <Input id="saldoDevedorBanco" type="number" step="0.01" placeholder="Ex: 180000.00" {...register("saldoDevedorBanco")} />
+                <p className="text-xs text-muted-foreground">Saldo atual conforme extrato ou notificação do banco</p>
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label>Periodicidade das Parcelas</Label>
+                <div className="flex gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" value="anual" {...register("periodicidadeParcela")} defaultChecked />
+                    <span className="text-sm">Anual (safra a safra — padrão rural)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" value="mensal" {...register("periodicidadeParcela")} />
+                    <span className="text-sm">Mensal</span>
+                  </label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Conversão de taxa: i_período = (1 + i_aa)^(1/n) − 1 — equivalente exata, não divisão simples
+                </p>
+              </div>
+              <Alert className="md:col-span-2 border-blue-200 bg-blue-50">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-xs text-blue-700">
+                  <strong>Fórmula utilizada (Sistema Price):</strong> PMT = PV × i / (1 − (1 + i)^-n)
+                  — O sistema calcula a prestação legal (12% a.a.) e compara com o valor efetivamente pago,
+                  gerando a tabela de amortização completa e a memória de cálculo para o laudo.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          )}
+        </Card>
 
         <div className="flex gap-3">
           <Button

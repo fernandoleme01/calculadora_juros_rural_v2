@@ -38,7 +38,10 @@ import {
   Edit2,
   Eye,
   Download,
+  Upload,
+  CheckCheck,
 } from "lucide-react";
+import UploadContratoPDF, { type DadosExtradosPDF } from "@/components/UploadContratoPDF";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -99,6 +102,8 @@ export default function CadeiaContratos() {
   const [laudoTexto, setLaudoTexto] = useState<string | null>(null);
   const [nomeProdutor, setNomeProdutor] = useState("");
   const [abaAtiva, setAbaAtiva] = useState("contratos");
+  const [modoEntrada, setModoEntrada] = useState<"manual" | "pdf">("manual");
+  const [pdfExtraido, setPdfExtraido] = useState(false);
 
   // ── Queries ──
   const { data: cadeias, refetch: refetchCadeias } = trpc.cadeia.listar.useQuery();
@@ -190,6 +195,36 @@ export default function CadeiaContratos() {
   const onSubmitContrato = (data: FormContrato) => {
     if (!cadeiaAtiva) return;
     adicionarContrato.mutate({ ...data, cadeiaId: cadeiaAtiva });
+  };
+
+  const handlePdfExtraido = (dados: DadosExtradosPDF) => {
+    // Pré-preenche o formulário com os dados extraídos do PDF
+    if (dados.numeroCedula) formContrato.setValue("numeroContrato", dados.numeroCedula);
+    if (dados.dataContratacao) formContrato.setValue("dataContratacao", dados.dataContratacao);
+    if (dados.dataVencimento) formContrato.setValue("dataVencimento", dados.dataVencimento);
+    if (dados.valorPrincipal) formContrato.setValue("valorContrato", dados.valorPrincipal);
+    if (dados.taxaJurosAnual) formContrato.setValue("taxaJurosAnual", dados.taxaJurosAnual);
+    if (dados.prazoMeses) formContrato.setValue("numeroParcelas", dados.prazoMeses);
+    if (dados.garantias) formContrato.setValue("garantias", dados.garantias);
+    if (dados.observacoes) formContrato.setValue("observacoes", dados.observacoes);
+    if (dados.sistemaAmortizacao) {
+      const sacMap: Record<string, any> = {
+        price: "price", sac: "sac", saf: "saf", outro: "outro",
+      };
+      const s = sacMap[dados.sistemaAmortizacao.toLowerCase()];
+      if (s) formContrato.setValue("sistemaAmortizacao", s);
+    }
+    if (dados.modalidade) {
+      const modalMap: Record<string, any> = {
+        custeio: "custeio", investimento: "investimento",
+        comercializacao: "comercializacao", outro: "outro",
+      };
+      const m = modalMap[dados.modalidade.toLowerCase()];
+      if (m) formContrato.setValue("modalidade", m);
+    }
+    setPdfExtraido(true);
+    setModoEntrada("manual"); // Volta para o formulário com dados pré-preenchidos
+    toast.success("Dados extraídos! Revise e confirme antes de salvar.");
   };
 
   const handleAnalisar = () => {
@@ -712,6 +747,53 @@ export default function CadeiaContratos() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={formContrato.handleSubmit(onSubmitContrato)} className="space-y-4">
+            {/* Seletor de modo: manual ou PDF */}
+            <div className="flex gap-2 p-1 bg-muted rounded-lg">
+              <button
+                type="button"
+                onClick={() => setModoEntrada("manual")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                  modoEntrada === "manual"
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Edit2 className="h-3.5 w-3.5" />
+                Preencher Manualmente
+              </button>
+              <button
+                type="button"
+                onClick={() => setModoEntrada("pdf")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                  modoEntrada === "pdf"
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Importar PDF do Contrato
+              </button>
+            </div>
+
+            {/* Badge de PDF extraído */}
+            {pdfExtraido && modoEntrada === "manual" && (
+              <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-md px-3 py-2">
+                <CheckCheck className="h-3.5 w-3.5" />
+                Dados importados do PDF — revise os campos abaixo antes de salvar
+              </div>
+            )}
+
+            {/* Modo PDF: exibe o componente de upload */}
+            {modoEntrada === "pdf" && (
+              <UploadContratoPDF
+                onDadosExtraidos={(dados) => handlePdfExtraido(dados)}
+                onFechar={() => setModoEntrada("manual")}
+              />
+            )}
+
+            {/* Modo manual (ou após PDF): exibe o formulário */}
+            {modoEntrada === "manual" && (
+            <>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Ordem na Cadeia *</Label>
@@ -837,6 +919,8 @@ export default function CadeiaContratos() {
                 {...formContrato.register("observacoes")}
               />
             </div>
+            </>
+            )} {/* fim modoEntrada === manual */}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setModalNovoContrato(false)}>Cancelar</Button>

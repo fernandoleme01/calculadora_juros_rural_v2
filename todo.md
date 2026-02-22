@@ -248,3 +248,40 @@
 - [x] Calculadora interativa na página Dados do BCB: valor do contrato + período + indexador → valor final, juros totais, excesso vs. limite legal
 - [x] Comparativo visual lado a lado de todos os indexadores para o mesmo contrato
 - [x] Indicação de qual indexador resulta em menor custo (mais favorável ao devedor)
+
+## Extração Automática de Dados de Contrato (PDF → Calculadora TCR)
+- [ ] Backend: endpoint tRPC extrairDadosContratoPDF que recebe URL do PDF, extrai texto e usa LLM para identificar campos
+- [ ] Backend: LLM extrai valor principal, taxa de juros, prazo, modalidade, banco, data de contratação, sistema de amortização
+- [ ] Backend: upload do PDF para S3 antes da extração
+- [ ] Frontend: botão "Importar PDF do Contrato" na calculadora TCR
+- [ ] Frontend: modal de upload com drag-and-drop e progresso
+- [ ] Frontend: após extração, pré-preencher campos automaticamente com badge "Extraído do PDF"
+- [ ] Frontend: permitir edição manual dos campos extraídos antes de calcular
+
+## Fluxo PDF → Laudo Automático
+- [ ] Frontend: componente UploadContratoPDF com drag-and-drop, progresso e extração via LLM
+- [ ] Frontend: após extração, pré-preencher todos os campos da calculadora TCR automaticamente
+- [ ] Frontend: botão "Calcular e Gerar Laudo" que executa TCR + laudo em sequência
+- [ ] Frontend: exibir laudo gerado diretamente na tela após o cálculo, sem navegar para outra página
+
+## Parcelas Pagas nas Calculadoras
+- [ ] Calculadora TCR: adicionar campo "Número de Parcelas Pagas" e "Valor Médio da Parcela Paga"
+- [ ] Calculadora TCR: calcular e exibir total pago vs. total que deveria ter sido pago (taxa legal)
+- [ ] Amortização: garantir que os campos de parcelas pagas e valor por parcela estejam funcionando corretamente
+
+## Calculadora TCR — Resultado Inline + Botão Gerar Laudo
+- [ ] Resultado da calculadora TCR exibido na mesma página (sem redirecionar para /resultado)
+- [ ] Botão "Gerar Laudo Técnico" disponível após o cálculo (escolha do usuário, não automático)
+- [ ] Laudo gerado exibido inline na mesma página após clicar no botão
+
+## Parcelas Pagas e Saldo Devedor na Calculadora TCR
+- [ ] Backend: schema Zod aceita numeroParcelas, parcelasPagas, valorParcelaPaga, saldoDevedorBanco
+- [ ] Backend: cálculo de totalPagoContrato vs. totalPagoLegal e excessoPago
+- [ ] Backend: cálculo de saldoDevedorRevisado (pela taxa legal) vs. saldoDevedorBanco
+- [ ] Frontend: seção "Parcelas e Saldo Devedor" na Calculadora.tsx com campos claros
+- [ ] Frontend: resultado exibe comparativo total pago vs. legal e saldo devedor revisado
+
+## Upload de PDF na Cadeia de Contratos
+- [ ] Formulário de adição de contrato na Cadeia oferece duas opções: preenchimento manual ou upload de PDF
+- [ ] Upload de PDF extrai dados via LLM e pré-preenche o formulário do contrato
+- [ ] Usuário pode revisar e corrigir os dados extraídos antes de salvar

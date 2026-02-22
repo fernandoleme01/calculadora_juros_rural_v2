@@ -47,6 +47,26 @@ export interface DadosFinanciamento {
   fatorInflacaoImplicita?: number; // FII calculado pelo BCB
   fatorPrograma?: number; // FP definido pelo CMN
   fatorAjuste?: number; // FA definido pelo CMN
+  // Parcelas pagas (opcional — para análise de excesso)
+  numeroParcelas?: number;       // Total de parcelas do contrato
+  parcelasPagas?: number;        // Quantas parcelas já foram pagas
+  valorParcelaPaga?: number;     // Valor médio efetivamente pago por parcela (R$)
+  saldoDevedorBanco?: number;    // Saldo devedor informado pelo banco (R$)
+}
+
+// Análise de parcelas pagas vs. limite legal
+export interface AnaliseParcelas {
+  numeroParcelas: number;          // Total de parcelas
+  parcelasPagas: number;           // Parcelas efetivamente pagas
+  valorParcelaPaga: number;        // Valor médio pago por parcela (R$)
+  totalPagoContrato: number;       // Total pago pelo contrato (R$)
+  parcelaLegal: number;            // Valor da parcela pela taxa legal (R$)
+  totalLegal: number;              // Total que deveria ter sido pago (R$)
+  excessoPago: number;             // Excesso cobrado = totalPago - totalLegal (R$)
+  saldoDevedorBanco: number;       // Saldo informado pelo banco (R$)
+  saldoDevedorRevisado: number;    // Saldo recalculado pela taxa legal (R$)
+  diferencaSaldo: number;          // Saldo banco - saldo revisado (R$)
+  percentualExcesso: number;       // Excesso em % do total legal
 }
 
 export interface ResultadoCalculo {
@@ -75,6 +95,8 @@ export interface ResultadoCalculo {
   conformidade: ConformidadeLegal;
   // Memória de cálculo
   memoriaCalculo: MemoriaCalculo;
+  // Análise de parcelas pagas (opcional)
+  analiseParcelas?: AnaliseParcelas;
 }
 
 export interface ConformidadeLegal {
@@ -665,4 +687,181 @@ export function getJurisprudenciaRelevante(): Jurisprudencia[] {
         "CRÉDITO RURAL. JUROS REMUNERATÓRIOS E MORATÓRIOS. LIMITES LEGAIS. Nos contratos de crédito rural, a limitação dos juros remuneratórios deve ser fixada em 12% ao ano e os juros moratórios em 1% ao ano, conforme legislação específica aplicável às cédulas de crédito rural.",
     },
   ];
+}
+
+// ─── Análise de Parcelas Pagas vs. Limite Legal ──────────────────────────────
+
+/**
+ * Calcula o comparativo entre o que foi pago pelo contrato e o que deveria
+ * ter sido pago pela taxa legal máxima (12% a.a. — Decreto nº 22.626/33).
+ *
+ * Usa o sistema Price (prestações iguais) como referência, que é o mais
+ * comum em contratos de crédito rural.
+ */
+// Linha da tabela de amortização parcela a parcela
+export interface LinhaTabelaAmortizacao {
+  parcela: number;              // Número da parcela
+  saldoInicial: number;         // Saldo devedor no início do período
+  jurosDevidos: number;         // Juros do período = saldo_inicial × i
+  amortizacao: number;          // Amortização = PMT - juros_devidos
+  prestacao: number;            // PMT (prestação total)
+  saldoFinal: number;           // Saldo devedor após pagamento
+  jurosDevidos_legal: number;   // Juros pelo limite legal
+  amortizacao_legal: number;    // Amortização pelo limite legal
+  prestacao_legal: number;      // PMT pelo limite legal
+  saldoFinal_legal: number;     // Saldo devedor legal após pagamento
+  excesso: number;              // Excesso cobrado nesta parcela
+}
+
+export function calcularAnaliseParcelas(
+  valorPrincipal: number,
+  taxaContratoAA: number,
+  numeroParcelas: number,
+  parcelasPagas: number,
+  valorParcelaPaga: number,
+  saldoDevedorBanco: number,
+  periodicidade: "mensal" | "anual" = "anual"
+): AnaliseParcelas & { tabelaAmortizacao: LinhaTabelaAmortizacao[]; memoriaCalculo: string } {
+  const TAXA_LEGAL_AA = LIMITE_JUROS_REMUNERATORIOS_AA; // 12% a.a.
+  const fmtR = (n: number) => `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  // ── 1. Conversão de taxas anuais para a periodicidade do contrato ──────────
+  // Fórmula: i_periodo = (1 + i_aa)^(1/n) - 1
+  //   Mensal: n = 12  →  i_mensal = (1 + i_aa)^(1/12) - 1
+  //   Anual:  n = 1   →  i_anual  = i_aa (sem conversão)
+  const taxaContratoPeriodo = periodicidade === "mensal"
+    ? Math.pow(1 + taxaContratoAA / 100, 1 / 12) - 1
+    : taxaContratoAA / 100;
+
+  const taxaLegalPeriodo = periodicidade === "mensal"
+    ? Math.pow(1 + TAXA_LEGAL_AA / 100, 1 / 12) - 1
+    : TAXA_LEGAL_AA / 100;
+
+  // ── 2. Cálculo da Prestação Price (PMT) ─────────────────────────────────────
+  // Fórmula: PMT = PV × i / (1 - (1 + i)^-n)
+  //   PV = valor principal
+  //   i  = taxa do período
+  //   n  = número total de parcelas
+  const calcPMT = (pv: number, i: number, n: number): number => {
+    if (i === 0) return pv / n;
+    return (pv * i) / (1 - Math.pow(1 + i, -n));
+  };
+
+  const pmtContrato = calcPMT(valorPrincipal, taxaContratoPeriodo, numeroParcelas);
+  const pmtLegal    = calcPMT(valorPrincipal, taxaLegalPeriodo, numeroParcelas);
+
+  // ── 3. Tabela de amortização parcela a parcela (Price) ───────────────────────
+  // Para cada parcela k:
+  //   Juros_k       = SD_{k-1} × i
+  //   Amortização_k = PMT - Juros_k
+  //   SD_k          = SD_{k-1} - Amortização_k
+  const tabelaAmortizacao: LinhaTabelaAmortizacao[] = [];
+  let sdContrato = valorPrincipal;
+  let sdLegal    = valorPrincipal;
+
+  for (let k = 1; k <= Math.max(numeroParcelas, parcelasPagas); k++) {
+    // Contrato
+    const juros_c = sdContrato * taxaContratoPeriodo;
+    const amort_c = pmtContrato - juros_c;
+    const sdFinal_c = Math.max(0, sdContrato - amort_c);
+
+    // Taxa legal
+    const juros_l = sdLegal * taxaLegalPeriodo;
+    const amort_l = pmtLegal - juros_l;
+    const sdFinal_l = Math.max(0, sdLegal - amort_l);
+
+    // Excesso nesta parcela = PMT contrato - PMT legal
+    // (usamos o valor informado pelo usuário como PMT real para as parcelas pagas)
+    const pmtReal = k <= parcelasPagas ? valorParcelaPaga : pmtContrato;
+    const excesso = k <= parcelasPagas ? Math.max(0, pmtReal - pmtLegal) : 0;
+
+    tabelaAmortizacao.push({
+      parcela: k,
+      saldoInicial: sdContrato,
+      jurosDevidos: juros_c,
+      amortizacao: amort_c,
+      prestacao: pmtReal,
+      saldoFinal: sdFinal_c,
+      jurosDevidos_legal: juros_l,
+      amortizacao_legal: amort_l,
+      prestacao_legal: pmtLegal,
+      saldoFinal_legal: sdFinal_l,
+      excesso,
+    });
+
+    sdContrato = sdFinal_c;
+    sdLegal    = sdFinal_l;
+  }
+
+  // ── 4. Totais das parcelas pagas ─────────────────────────────────────────────
+  const parcelasAnalisadas = tabelaAmortizacao.slice(0, parcelasPagas);
+  const totalPagoContrato  = parcelasAnalisadas.reduce((s, p) => s + p.prestacao, 0);
+  const totalLegal         = parcelasAnalisadas.reduce((s, p) => s + p.prestacao_legal, 0);
+  const excessoPago        = Math.max(0, totalPagoContrato - totalLegal);
+  const percentualExcesso  = totalLegal > 0 ? (excessoPago / totalLegal) * 100 : 0;
+
+  // ── 5. Saldo devedor revisado após N parcelas (pela taxa legal) ──────────────
+  // Calculado diretamente da tabela de amortização (mais preciso que a fórmula fechada)
+  const saldoDevedorRevisado = parcelasPagas > 0
+    ? tabelaAmortizacao[parcelasPagas - 1].saldoFinal_legal
+    : valorPrincipal;
+
+  const diferencaSaldo = Math.max(0, saldoDevedorBanco - saldoDevedorRevisado);
+
+  // ── 6. Memória de cálculo detalhada ─────────────────────────────────────────
+  const memoriaCalculo = [
+    `═══════════════════════════════════════════════════════════════`,
+    `ANÁLISE DE PARCELAS PAGAS — SISTEMA PRICE`,
+    `Fundamento: Decreto nº 22.626/33 (Lei de Usura) · DL 167/67 · MCR 7-1`,
+    `═══════════════════════════════════════════════════════════════`,
+    ``,
+    `1. DADOS DO CONTRATO`,
+    `   Valor Principal (PV)   : ${fmtR(valorPrincipal)}`,
+    `   Taxa Contratada        : ${taxaContratoAA.toFixed(4)}% a.a.`,
+    `   Taxa Legal Máxima      : ${TAXA_LEGAL_AA.toFixed(4)}% a.a. (Decreto nº 22.626/33)`,
+    `   Nº Total de Parcelas   : ${numeroParcelas}`,
+    `   Periodicidade          : ${periodicidade === "mensal" ? "Mensal" : "Anual (safra a safra)"}`,
+    ``,
+    `2. CONVERSÃO DE TAXAS`,
+    `   Fórmula: i_periodo = (1 + i_aa)^(1/${periodicidade === "mensal" ? 12 : 1}) - 1`,
+    `   Taxa Contratada/${periodicidade === "mensal" ? "mês" : "ano"}: ${(taxaContratoPeriodo * 100).toFixed(6)}%`,
+    `   Taxa Legal/${periodicidade === "mensal" ? "mês" : "ano"}     : ${(taxaLegalPeriodo * 100).toFixed(6)}%`,
+    ``,
+    `3. CÁLCULO DA PRESTAÇÃO (SISTEMA PRICE)`,
+    `   Fórmula: PMT = PV × i / (1 - (1 + i)^-n)`,
+    `   PMT Contrato           : ${fmtR(pmtContrato)}`,
+    `   PMT Legal (12% a.a.)   : ${fmtR(pmtLegal)}`,
+    `   Valor Informado (pago) : ${fmtR(valorParcelaPaga)}`,
+    `   Diferença por parcela  : ${fmtR(Math.max(0, valorParcelaPaga - pmtLegal))}`,
+    ``,
+    `4. RESULTADO DAS ${parcelasPagas} PARCELAS PAGAS`,
+    `   Total pago (contrato)  : ${fmtR(totalPagoContrato)}`,
+    `   Total legal (12% a.a.) : ${fmtR(totalLegal)}`,
+    `   EXCESSO COBRADO        : ${fmtR(excessoPago)} (${percentualExcesso.toFixed(2)}% acima do limite legal)`,
+    ``,
+    `5. SALDO DEVEDOR REVISADO`,
+    `   Saldo informado banco  : ${fmtR(saldoDevedorBanco)}`,
+    `   Saldo revisado (legal) : ${fmtR(saldoDevedorRevisado)}`,
+    `   DIFERENÇA NO SALDO     : ${fmtR(diferencaSaldo)}`,
+    ``,
+    `CONCLUSÃO: O contrato cobrou ${fmtR(excessoPago)} a mais do que o permitido`,
+    `pela legislação vigente. O saldo devedor está inflado em ${fmtR(diferencaSaldo)}.`,
+    `Fundamento: Decreto nº 22.626/33, art. 1º; DL 167/67, art. 5º; STJ (jurisprudência consolidada).`,
+  ].join("\n");
+
+  return {
+    numeroParcelas,
+    parcelasPagas,
+    valorParcelaPaga,
+    totalPagoContrato,
+    parcelaLegal: pmtLegal,
+    totalLegal,
+    excessoPago,
+    saldoDevedorBanco,
+    saldoDevedorRevisado,
+    diferencaSaldo,
+    percentualExcesso,
+    tabelaAmortizacao,
+    memoriaCalculo,
+  };
 }

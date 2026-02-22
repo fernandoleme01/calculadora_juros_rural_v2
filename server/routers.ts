@@ -26,12 +26,14 @@ import {
   calcularTCRPos,
   calcularTCRPre,
   analisarConformidade,
+  calcularAnaliseParcelas,
   getJurisprudenciaRelevante,
   LIMITE_JUROS_REMUNERATORIOS_AA,
   LIMITE_JUROS_MORA_AA,
   FATORES_PROGRAMA,
 } from "./calculoTcr";
 import { invokeLLM } from "./_core/llm";
+import { storagePut } from "./storage";
 import { buscarDadosBCB, buscarIPCAMensal } from "./bancoCentral";
 import { criarSessaoCheckout, criarPortalCliente, obterOuCriarCustomer } from "./stripeService";
 import { salvarStripeCustomerId } from "./db";
@@ -86,6 +88,12 @@ const dadosFinanciamentoSchema = z.object({
   fatorInflacaoImplicita: z.number().optional(),
   fatorPrograma: z.number().optional(),
   fatorAjuste: z.number().optional(),
+  // Parcelas pagas (análise de excesso)
+  numeroParcelas: z.number().int().positive().optional(),
+  parcelasPagas: z.number().int().min(0).optional(),
+  valorParcelaPaga: z.number().positive().optional(),
+  saldoDevedorBanco: z.number().positive().optional(),
+  periodicidadeParcela: z.enum(["mensal", "anual"]).default("anual"),
   salvar: z.boolean().default(false),
 });
 
@@ -168,6 +176,24 @@ export const appRouter = router({
           resultado = calcularTCRPos(dados);
         } else {
           resultado = calcularTCRPre(dados);
+        }
+
+        // Análise de parcelas pagas (se informadas)
+        if (
+          input.numeroParcelas &&
+          input.parcelasPagas !== undefined &&
+          input.valorParcelaPaga &&
+          input.saldoDevedorBanco
+        ) {
+          resultado.analiseParcelas = calcularAnaliseParcelas(
+            input.valorPrincipal,
+            input.taxaJurosRemuneratorios,
+            input.numeroParcelas,
+            input.parcelasPagas,
+            input.valorParcelaPaga,
+            input.saldoDevedorBanco,
+            input.periodicidadeParcela
+          );
         }
 
         // Salvar no histórico se solicitado
@@ -798,20 +824,17 @@ Fundamente o parecer na Lei nº 4.829/65, Decreto-Lei nº 167/67, Decreto nº 22
   }),
 
   historico: router({
-
     listar: publicProcedure.query(async ({ ctx }) => {
       if (ctx.user) {
         return await listarCalculosPorUsuario(ctx.user.id);
       }
       return await listarCalculos();
     }),
-
     buscar: publicProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
         return await buscarCalculoPorId(input.id);
       }),
-
     deletar: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
@@ -819,7 +842,109 @@ Fundamente o parecer na Lei nº 4.829/65, Decreto-Lei nº 167/67, Decreto nº 22
         return { success: true };
       }),
   }),
-});
 
+  // ─── Extração de Dados de Contrato (PDF) ───────────────────────────────────────────
+  contrato: router({
+    extrairDadosPDF: protectedProcedure
+      .input(z.object({
+        pdfBase64: z.string(),
+        nomeArquivo: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        // 1. Upload do PDF para S3
+        const buffer = Buffer.from(input.pdfBase64, "base64");
+        const suffix = Date.now();
+        const fileKey = `contratos/${ctx.user.id}/${suffix}-${input.nomeArquivo ?? "contrato.pdf"}`;
+        const { url: pdfUrl } = await storagePut(fileKey, buffer, "application/pdf");
+
+        // 2. LLM extrai dados estruturados do PDF
+        const systemPrompt = `Você é um especialista em crédito rural brasileiro. Analise o contrato fornecido e extraia os dados estruturados. Retorne APENAS JSON válido, sem markdown.`;
+        const userPrompt = `Extraia os dados do contrato de crédito rural. Se não encontrar um campo, use null.
+
+Retorne exatamente:
+{
+  "valorPrincipal": <número em reais>,
+  "taxaJurosAnual": <% ao ano>,
+  "taxaJurosMensal": <% ao mês — calcule se não explícito>,
+  "prazoMeses": <número de meses>,
+  "prazoAnos": <número de anos>,
+  "dataContratacao": <DD/MM/AAAA>,
+  "dataVencimento": <DD/MM/AAAA>,
+  "banco": <nome da instituição>,
+  "modalidade": <custeio_agricola|custeio_pecuario|investimento|comercializacao|pronaf|outros>,
+  "sistemaAmortizacao": <price|sac|saf|outros|null>,
+  "indexador": <prefixado|selic|ipca|tr|tjlp|igpm|cdi|outros>,
+  "numeroCedula": <número do contrato/cédula>,
+  "nomeDevedor": <nome do tomador>,
+  "cpfCnpjDevedor": <CPF ou CNPJ>,
+  "finalidade": <descrição da finalidade>,
+  "garantias": <descrição das garantias>,
+  "observacoes": <cláusulas suspeitas, encargos adicionais, comissões>
+}`;
+
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: systemPrompt },
+            {
+              role: "user",
+              content: [
+                { type: "file_url", file_url: { url: pdfUrl, mime_type: "application/pdf" } },
+                { type: "text", text: userPrompt },
+              ],
+            },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "dados_contrato",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  valorPrincipal: { type: ["number", "null"] },
+                  taxaJurosAnual: { type: ["number", "null"] },
+                  taxaJurosMensal: { type: ["number", "null"] },
+                  prazoMeses: { type: ["integer", "null"] },
+                  prazoAnos: { type: ["number", "null"] },
+                  dataContratacao: { type: ["string", "null"] },
+                  dataVencimento: { type: ["string", "null"] },
+                  banco: { type: ["string", "null"] },
+                  modalidade: { type: ["string", "null"] },
+                  sistemaAmortizacao: { type: ["string", "null"] },
+                  indexador: { type: ["string", "null"] },
+                  numeroCedula: { type: ["string", "null"] },
+                  nomeDevedor: { type: ["string", "null"] },
+                  cpfCnpjDevedor: { type: ["string", "null"] },
+                  finalidade: { type: ["string", "null"] },
+                  garantias: { type: ["string", "null"] },
+                  observacoes: { type: ["string", "null"] },
+                },
+                required: [
+                  "valorPrincipal", "taxaJurosAnual", "taxaJurosMensal",
+                  "prazoMeses", "prazoAnos", "dataContratacao", "dataVencimento",
+                  "banco", "modalidade", "sistemaAmortizacao", "indexador",
+                  "numeroCedula", "nomeDevedor", "cpfCnpjDevedor",
+                  "finalidade", "garantias", "observacoes",
+                ],
+                additionalProperties: false,
+              },
+            },
+          },
+        });
+
+        const content = response.choices?.[0]?.message?.content;
+        if (!content) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "LLM não retornou dados" });
+
+        let dados: Record<string, unknown>;
+        try {
+          dados = typeof content === "string" ? JSON.parse(content) : content;
+        } catch {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Erro ao interpretar resposta do LLM" });
+        }
+
+        return { dados, pdfUrl, sucesso: true };
+      }),
+  }),
+});
 export type AppRouter = typeof appRouter;
 
