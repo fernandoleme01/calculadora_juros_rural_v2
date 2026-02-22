@@ -285,3 +285,9 @@
 - [ ] Formulário de adição de contrato na Cadeia oferece duas opções: preenchimento manual ou upload de PDF
 - [ ] Upload de PDF extrai dados via LLM e pré-preenche o formulário do contrato
 - [ ] Usuário pode revisar e corrigir os dados extraídos antes de salvar
+
+## Comparativo de Parcelas no Resultado TCR
+- [ ] Tabela comparativa: parcela nº, valor pago, valor legal, diferença (excesso), % de excesso
+- [ ] Card de resumo: total pago, total legal, excesso total acumulado
+- [ ] Alerta jurídico quando excesso total > 0 com fundamentação legal
+- [ ] Integrar analiseParcelas do backend no Resultado.tsx

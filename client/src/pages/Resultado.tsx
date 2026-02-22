@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { CheckCircle, AlertTriangle, XCircle, ArrowLeft, Download, FileText, Scale, Loader2 } from "lucide-react";
+import { CheckCircle, AlertTriangle, XCircle, ArrowLeft, Download, FileText, Scale, Loader2, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { getResultadoTemp, getInputTemp } from "./Calculadora";
 import { Streamdown } from "streamdown";
@@ -258,6 +259,147 @@ export default function Resultado() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Comparativo de Parcelas Pagas */}
+      {resultado.analiseParcelas && (
+        <Card className="border-l-4 border-l-orange-500">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-orange-600" />
+              Análise de Parcelas Pagas vs. Limite Legal
+            </CardTitle>
+            <CardDescription>
+              Comparativo entre o que foi cobrado pelo banco e o que deveria ter sido cobrado pela taxa legal máxima de 12% a.a.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {/* Cards de resumo */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                <p className="text-xs text-muted-foreground">Total Pago ao Banco</p>
+                <p className="text-base font-bold">{formatBRL(resultado.analiseParcelas.totalPagoContrato)}</p>
+                <p className="text-xs text-muted-foreground">{resultado.analiseParcelas.parcelasPagas} parcelas</p>
+              </div>
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg space-y-1">
+                <p className="text-xs text-emerald-700">Total Legal (12% a.a.)</p>
+                <p className="text-base font-bold text-emerald-700">{formatBRL(resultado.analiseParcelas.totalLegal)}</p>
+                <p className="text-xs text-emerald-600">Parcela legal: {formatBRL(resultado.analiseParcelas.parcelaLegal)}</p>
+              </div>
+              <div className={`p-3 rounded-lg border space-y-1 ${
+                resultado.analiseParcelas.excessoPago > 0
+                  ? 'bg-red-50 border-red-200'
+                  : 'bg-emerald-50 border-emerald-200'
+              }`}>
+                <p className={`text-xs ${
+                  resultado.analiseParcelas.excessoPago > 0 ? 'text-red-700' : 'text-emerald-700'
+                }`}>Excesso Total Cobrado</p>
+                <p className={`text-base font-bold ${
+                  resultado.analiseParcelas.excessoPago > 0 ? 'text-red-700' : 'text-emerald-700'
+                }`}>
+                  {resultado.analiseParcelas.excessoPago > 0 ? '+' : ''}{formatBRL(resultado.analiseParcelas.excessoPago)}
+                </p>
+                <p className={`text-xs ${
+                  resultado.analiseParcelas.excessoPago > 0 ? 'text-red-600' : 'text-emerald-600'
+                }`}>
+                  {resultado.analiseParcelas.percentualExcesso.toFixed(2)}% acima do legal
+                </p>
+              </div>
+              <div className={`p-3 rounded-lg border space-y-1 ${
+                resultado.analiseParcelas.diferencaSaldo > 0
+                  ? 'bg-amber-50 border-amber-200'
+                  : 'bg-muted/50'
+              }`}>
+                <p className="text-xs text-muted-foreground">Saldo Devedor Revisado</p>
+                <p className="text-base font-bold">{formatBRL(resultado.analiseParcelas.saldoDevedorRevisado)}</p>
+                {resultado.analiseParcelas.saldoDevedorBanco > 0 && (
+                  <p className="text-xs text-amber-700">
+                    Banco: {formatBRL(resultado.analiseParcelas.saldoDevedorBanco)}
+                    {resultado.analiseParcelas.diferencaSaldo > 0 && (
+                      <span className="text-red-600 font-medium"> (+{formatBRL(resultado.analiseParcelas.diferencaSaldo)})</span>
+                    )}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Alerta jurídico quando há excesso */}
+            {resultado.analiseParcelas.excessoPago > 0 && (
+              <Alert className="border-red-200 bg-red-50">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-700 text-sm space-y-1">
+                  <p className="font-semibold">Cobrança acima do limite legal identificada</p>
+                  <p>O banco cobrou <strong>{formatBRL(resultado.analiseParcelas.excessoPago)}</strong> a mais do que o permitido pela taxa legal de 12% a.a. nas {resultado.analiseParcelas.parcelasPagas} parcelas analisadas.</p>
+                  <p className="text-xs mt-1">
+                    Fundamento: Decreto nº 22.626/33 (Lei de Usura), art. 1º — STJ, Súmula 382 — REsp 1.061.530/RS (recurso repetitivo) — MCR 7-1, Tabela 1, Res. CMN 5.234.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Tabela detalhada parcela a parcela */}
+            {resultado.analiseParcelas.tabelaAmortizacao && resultado.analiseParcelas.tabelaAmortizacao.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold">Tabela Comparativa — Parcela a Parcela</h4>
+                <div className="overflow-x-auto rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="text-xs w-12">Nº</TableHead>
+                        <TableHead className="text-xs">Saldo Inicial</TableHead>
+                        <TableHead className="text-xs">Parcela Contrato</TableHead>
+                        <TableHead className="text-xs text-emerald-700">Parcela Legal (12%)</TableHead>
+                        <TableHead className="text-xs">Juros Contrato</TableHead>
+                        <TableHead className="text-xs text-emerald-700">Juros Legais</TableHead>
+                        <TableHead className="text-xs">Saldo Final Contrato</TableHead>
+                        <TableHead className="text-xs text-emerald-700">Saldo Final Legal</TableHead>
+                        <TableHead className="text-xs text-red-700">Excesso</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {resultado.analiseParcelas.tabelaAmortizacao.map((linha: any, i: number) => (
+                        <TableRow key={i} className={linha.excesso > 0 ? 'bg-red-50/30' : ''}>
+                          <TableCell className="text-xs font-medium">{linha.parcela}</TableCell>
+                          <TableCell className="text-xs">{formatBRL(linha.saldoInicial)}</TableCell>
+                          <TableCell className="text-xs font-medium">{formatBRL(linha.prestacao)}</TableCell>
+                          <TableCell className="text-xs text-emerald-700">{formatBRL(linha.prestacao_legal)}</TableCell>
+                          <TableCell className="text-xs">{formatBRL(linha.jurosDevidos)}</TableCell>
+                          <TableCell className="text-xs text-emerald-700">{formatBRL(linha.jurosDevidos_legal)}</TableCell>
+                          <TableCell className="text-xs">{formatBRL(linha.saldoFinal)}</TableCell>
+                          <TableCell className="text-xs text-emerald-700">{formatBRL(linha.saldoFinal_legal)}</TableCell>
+                          <TableCell className={`text-xs font-bold ${
+                            linha.excesso > 0 ? 'text-red-600' : 'text-emerald-600'
+                          }`}>
+                            {linha.excesso > 0 ? '+' : ''}{formatBRL(linha.excesso)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  * Fórmula aplicada: PMT = PV × i / (1 - (1+i)^-n) | Taxa convertida por capitalização composta: i_período = (1+i_aa)^(1/12) - 1
+                </p>
+              </div>
+            )}
+
+            {/* Memória de cálculo textual */}
+            {resultado.analiseParcelas.memoriaCalculo && (
+              <Accordion type="single" collapsible>
+                <AccordionItem value="memoria-parcelas">
+                  <AccordionTrigger className="text-sm font-medium hover:no-underline">
+                    Memória de Cálculo das Parcelas (passo a passo)
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <pre className="text-xs font-mono bg-muted/50 p-4 rounded-lg whitespace-pre-wrap leading-relaxed">
+                      {resultado.analiseParcelas.memoriaCalculo}
+                    </pre>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Memória de Cálculo */}
       {memoria && (
