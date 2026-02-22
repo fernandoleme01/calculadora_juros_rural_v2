@@ -30,6 +30,7 @@ function ConformeBadge({ status }: { status: string | null }) {
 function formatBRL(value: string | null) {
   if (!value) return "—";
   const num = parseFloat(value);
+  if (isNaN(num)) return "—";
   return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
@@ -158,7 +159,7 @@ export default function Historico() {
                         {formatBRL(calc.totalDevido)}
                       </TableCell>
                       <TableCell className="font-mono text-sm">
-                        {calc.tcrEfetiva ? `${parseFloat(calc.tcrEfetiva).toFixed(4)}% a.a.` : "—"}
+                        {calc.tcrEfetiva ? `${(isNaN(parseFloat(calc.tcrEfetiva)) ? 0 : parseFloat(calc.tcrEfetiva)).toFixed(4)}% a.a.` : "—"}
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">

@@ -291,3 +291,14 @@
 - [ ] Card de resumo: total pago, total legal, excesso total acumulado
 - [ ] Alerta jurídico quando excesso total > 0 com fundamentação legal
 - [ ] Integrar analiseParcelas do backend no Resultado.tsx
+
+## IOF, TAC, TEC e CET — Encargos Adicionais
+- [ ] Backend: adicionar IOF, TAC, TEC ao schema Zod da calculadora TCR
+- [ ] Backend: calcular IOF legal (0,0082% a.a. + 0,38% adicional — Lei 8.894/94)
+- [ ] Backend: verificar TAC e TEC contra Súmula 566 STJ (proibidas em contratos bancários)
+- [ ] Backend: calcular CET (Custo Efetivo Total) incluindo todos os encargos
+- [ ] Backend: retornar análise de encargos no resultado da calculadora
+- [ ] Frontend: seção "Encargos Adicionais" na Calculadora.tsx com campos IOF, TAC, TEC
+- [ ] Frontend: exibir CET no resultado com comparativo vs. taxa nominal
+- [ ] Frontend: alerta jurídico automático para TAC/TEC abusivos (Súmula 566 STJ)
+- [ ] Frontend: alerta para IOF acima do limite legal (Lei 8.894/94)

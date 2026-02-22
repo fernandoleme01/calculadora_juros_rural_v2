@@ -33,12 +33,18 @@ function StatusBadge({ status }: { status: ConformidadeStatus }) {
   );
 }
 
-function formatBRL(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+function toNum(value: unknown): number {
+  if (value === null || value === undefined) return 0;
+  const n = typeof value === "string" ? parseFloat(value) : Number(value);
+  return isFinite(n) ? n : 0;
 }
 
-function formatPct(value: number, decimals = 4) {
-  return `${value.toFixed(decimals)}%`;
+function formatBRL(value: unknown) {
+  return toNum(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function formatPct(value: unknown, decimals = 4) {
+  return `${toNum(value).toFixed(decimals)}%`;
 }
 
 export default function Resultado() {
@@ -209,14 +215,14 @@ export default function Resultado() {
             {resultado.fam && (
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">FAM (Fator de Atualização)</p>
-                <p className="text-lg font-bold">{resultado.fam.toFixed(6)}</p>
-                <p className="text-xs text-muted-foreground">IPCA: {resultado.ipcaAcumulado?.toFixed(4)}%</p>
+                <p className="text-lg font-bold">{toNum(resultado.fam).toFixed(6)}</p>
+                <p className="text-xs text-muted-foreground">IPCA: {toNum(resultado.ipcaAcumulado).toFixed(4)}%</p>
               </div>
             )}
             {resultado.fii && (
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">FII (Inflação Implícita)</p>
-                <p className="text-lg font-bold">{resultado.fii.toFixed(7)}</p>
+                <p className="text-lg font-bold">{toNum(resultado.fii).toFixed(7)}</p>
               </div>
             )}
             <div className="space-y-1">
@@ -301,7 +307,7 @@ export default function Resultado() {
                 <p className={`text-xs ${
                   resultado.analiseParcelas.excessoPago > 0 ? 'text-red-600' : 'text-emerald-600'
                 }`}>
-                  {resultado.analiseParcelas.percentualExcesso.toFixed(2)}% acima do legal
+                  {toNum(resultado.analiseParcelas.percentualExcesso).toFixed(2)}% acima do legal
                 </p>
               </div>
               <div className={`p-3 rounded-lg border space-y-1 ${

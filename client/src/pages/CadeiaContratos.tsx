@@ -45,8 +45,10 @@ import UploadContratoPDF, { type DadosExtradosPDF } from "@/components/UploadCon
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const fmtR = (n: number | string) =>
-  Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const fmtR = (n: number | string | null | undefined) => {
+  const num = typeof n === 'string' ? parseFloat(n) : Number(n);
+  return (isFinite(num) ? num : 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+};
 
 const TIPO_LABELS: Record<string, { label: string; cor: string }> = {
   original: { label: "Contrato Original", cor: "bg-blue-100 text-blue-800 border-blue-200" },
@@ -461,7 +463,7 @@ export default function CadeiaContratos() {
                                         <div>
                                           <span className="text-muted-foreground">Taxa:</span>{" "}
                                           <span className={`font-medium ${parseFloat(c.taxaJurosAnual) > 12 ? "text-destructive" : "text-green-600"}`}>
-                                            {parseFloat(c.taxaJurosAnual).toFixed(2)}% a.a.
+                                            {(isNaN(parseFloat(c.taxaJurosAnual)) ? 0 : parseFloat(c.taxaJurosAnual)).toFixed(2)}% a.a.
                                           </span>
                                         </div>
                                         <div>
@@ -538,7 +540,7 @@ export default function CadeiaContratos() {
                           <CardContent className="pt-4 pb-3">
                             <p className="text-xs text-muted-foreground">Crescimento</p>
                             <p className={`text-base font-bold ${analise.incrementoTotal > 0 ? "text-destructive" : "text-green-600"}`}>
-                              {analise.percentualIncremento.toFixed(1)}%
+                              {Number(analise.percentualIncremento || 0).toFixed(1)}%
                             </p>
                             <p className="text-xs text-muted-foreground">{fmtR(analise.incrementoTotal)}</p>
                           </CardContent>

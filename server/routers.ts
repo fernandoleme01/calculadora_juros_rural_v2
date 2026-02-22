@@ -27,6 +27,7 @@ import {
   calcularTCRPre,
   analisarConformidade,
   calcularAnaliseParcelas,
+  calcularAnaliseEncargos,
   getJurisprudenciaRelevante,
   LIMITE_JUROS_REMUNERATORIOS_AA,
   LIMITE_JUROS_MORA_AA,
@@ -94,6 +95,11 @@ const dadosFinanciamentoSchema = z.object({
   valorParcelaPaga: z.number().positive().optional(),
   saldoDevedorBanco: z.number().positive().optional(),
   periodicidadeParcela: z.enum(["mensal", "anual"]).default("anual"),
+  // Encargos adicionais (IOF, TAC, TEC)
+  iofCobrado: z.number().min(0).optional(),
+  tacCobrada: z.number().min(0).optional(),
+  tecCobrada: z.number().min(0).optional(),
+  outrasTagas: z.number().min(0).optional(),
   salvar: z.boolean().default(false),
 });
 
@@ -193,6 +199,23 @@ export const appRouter = router({
             input.valorParcelaPaga,
             input.saldoDevedorBanco,
             input.periodicidadeParcela
+          );
+        }
+
+        // Análise de encargos adicionais (IOF, TAC, TEC)
+        const temEncargos = (input.iofCobrado ?? 0) > 0 ||
+          (input.tacCobrada ?? 0) > 0 ||
+          (input.tecCobrada ?? 0) > 0 ||
+          (input.outrasTagas ?? 0) > 0;
+        if (temEncargos) {
+          resultado.analiseEncargos = calcularAnaliseEncargos(
+            input.valorPrincipal,
+            input.taxaJurosRemuneratorios,
+            input.prazoMeses,
+            input.iofCobrado,
+            input.tacCobrada,
+            input.tecCobrada,
+            input.outrasTagas
           );
         }
 

@@ -228,7 +228,7 @@ export default function DadosBCB() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-primary">
-                  {data.selic.anualizada != null ? `${data.selic.anualizada.toFixed(2)}%` : "N/D"}
+                  {data.selic.anualizada != null ? `${(typeof data.selic.anualizada === 'string' ? parseFloat(data.selic.anualizada) : Number(data.selic.anualizada)).toFixed(2)}%` : "N/D"}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">ao ano (anualizada)</p>
                 {data.selic.diaria.length > 0 && (
@@ -501,20 +501,20 @@ export default function DadosBCB() {
                                   <p className="text-xs text-muted-foreground">{res.descricao}</p>
                                 </td>
                                 <td className={`py-2.5 px-3 text-right font-mono font-semibold ${res.cor}`}>
-                                  {res.taxaEfetiva.toFixed(2)}% a.a.
+                                  {(typeof res.taxaEfetiva === 'string' ? parseFloat(res.taxaEfetiva) : Number(res.taxaEfetiva || 0)).toFixed(2)}% a.a.
                                 </td>
                                 <td className="py-2.5 px-3 text-right font-mono">
-                                  R$ {res.valorFinal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  R$ {Number(res.valorFinal || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </td>
                                 <td className="py-2.5 px-3 text-right font-mono">
-                                  R$ {res.jurosTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  R$ {Number(res.jurosTotal || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </td>
                                 <td className={`py-2.5 px-3 text-right font-mono font-semibold ${
                                   res.excesso > 0 ? "text-red-600" : "text-green-600"
                                 }`}>
                                   {res.excesso > 0
-                                    ? `+ R$ ${res.excesso.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                    : res.id === "limite_legal" ? "—" : `- R$ ${Math.abs(res.excesso).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                    ? `+ R$ ${Number(res.excesso || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                    : res.id === "limite_legal" ? "—" : `- R$ ${Math.abs(Number(res.excesso || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                                   }
                                 </td>
                                 <td className="py-2.5 px-3 text-center">

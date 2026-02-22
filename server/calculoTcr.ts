@@ -52,6 +52,11 @@ export interface DadosFinanciamento {
   parcelasPagas?: number;        // Quantas parcelas já foram pagas
   valorParcelaPaga?: number;     // Valor médio efetivamente pago por parcela (R$)
   saldoDevedorBanco?: number;    // Saldo devedor informado pelo banco (R$)
+  // Encargos adicionais (opcional — IOF, TAC, TEC)
+  iofCobrado?: number;           // IOF efetivamente cobrado (R$)
+  tacCobrada?: number;           // TAC — Tarifa de Abertura de Crédito (R$)
+  tecCobrada?: number;           // TEC — Tarifa de Emissão de Carnê (R$)
+  outrasTagas?: number;          // Outras tarifas/seguros cobrados (R$)
 }
 
 // Análise de parcelas pagas vs. limite legal
@@ -97,6 +102,8 @@ export interface ResultadoCalculo {
   memoriaCalculo: MemoriaCalculo;
   // Análise de parcelas pagas (opcional)
   analiseParcelas?: AnaliseParcelas;
+  // Análise de encargos adicionais (opcional)
+  analiseEncargos?: AnaliseEncargos;
 }
 
 export interface ConformidadeLegal {
@@ -863,5 +870,209 @@ export function calcularAnaliseParcelas(
     percentualExcesso,
     tabelaAmortizacao,
     memoriaCalculo,
+  };
+}
+
+// ─── Interface: Análise de Encargos Adicionais (IOF, TAC, TEC) ───────────────
+
+export interface ItemEncargo {
+  nome: string;                  // Nome do encargo
+  valorCobrado: number;          // Valor efetivamente cobrado (R$)
+  valorLegal: number;            // Valor máximo permitido por lei (R$), 0 se proibido
+  excesso: number;               // Excesso = cobrado - legal
+  status: "legal" | "abusivo" | "proibido";
+  fundamentacao: string;         // Base legal para o alerta
+  sumula?: string;               // Súmula aplicável (ex: "STJ Súmula 566")
+}
+
+export interface AnaliseEncargos {
+  iof?: ItemEncargo;
+  tac?: ItemEncargo;
+  tec?: ItemEncargo;
+  outrasTagas?: ItemEncargo;
+  totalEncargos: number;         // Soma de todos os encargos cobrados
+  totalExcesso: number;          // Soma dos excessos
+  cetNominal: number;            // CET = taxa nominal + encargos/principal (% a.a.)
+  cetEfetivo: number;            // CET efetivo considerando prazo real (% a.a.)
+  alertas: string[];             // Alertas jurídicos
+  memoriaCalculo: string;        // Texto explicativo passo a passo
+}
+
+/**
+ * Calcula a análise de encargos adicionais (IOF, TAC, TEC) e o CET
+ *
+ * Fundamentação:
+ * - IOF: Lei 8.894/94, art. 1º — alíquota máxima 0,0082% a.d. + 0,38% adicional
+ * - TAC: STJ Súmula 566 — proibida cobrança de tarifa de abertura de crédito
+ * - TEC: STJ Súmula 566 — proibida cobrança de tarifa de emissão de carnê
+ * - CET: Resolução CMN 3.517/2007 — obrigatória divulgação do Custo Efetivo Total
+ */
+export function calcularAnaliseEncargos(
+  valorPrincipal: number,
+  taxaJurosAA: number,
+  prazoMeses: number,
+  iofCobrado?: number,
+  tacCobrada?: number,
+  tecCobrada?: number,
+  outrasTagas?: number
+): AnaliseEncargos {
+  const prazoAnos = prazoMeses / 12;
+  const alertas: string[] = [];
+  const encargos: ItemEncargo[] = [];
+
+  // ── IOF ──────────────────────────────────────────────────────────────────────
+  // Lei 8.894/94: alíquota máxima = 0,0082% a.d. + 0,38% adicional
+  // Para crédito rural: Decreto 6.306/2007 — alíquota 0% para operações rurais
+  // (art. 8º, §3º, II — operações de crédito rural com recursos controlados)
+  let iofItem: ItemEncargo | undefined;
+  if (iofCobrado !== undefined && iofCobrado > 0) {
+    // Crédito rural com recursos controlados: IOF = 0%
+    const iofLegal = 0; // Decreto 6.306/2007, art. 8º, §3º, II
+    const excesso = iofCobrado - iofLegal;
+    const status: "legal" | "abusivo" | "proibido" = excesso > 0 ? "proibido" : "legal";
+    if (status !== "legal") {
+      alertas.push(
+        `IOF INDEVIDO: Contratos de crédito rural com recursos controlados têm alíquota de IOF = 0% (Decreto 6.306/2007, art. 8º, §3º, II). ` +
+        `O valor de R$ ${iofCobrado.toFixed(2)} cobrado é integralmente indevido e deve ser restituído em dobro (CDC, art. 42, parágrafo único).`
+      );
+    }
+    iofItem = {
+      nome: "IOF — Imposto sobre Operações Financeiras",
+      valorCobrado: iofCobrado,
+      valorLegal: iofLegal,
+      excesso,
+      status,
+      fundamentacao: "Decreto 6.306/2007, art. 8º, §3º, II — IOF = 0% para crédito rural com recursos controlados",
+    };
+    encargos.push(iofItem);
+  }
+
+  // ── TAC ──────────────────────────────────────────────────────────────────────
+  // STJ Súmula 566: "Nos contratos bancários posteriores ao início da vigência da
+  // Resolução-CMN n. 3.518/2007, de 25/11/2007, pode ser cobrada a tarifa de
+  // cadastro no início do relacionamento entre o consumidor e a instituição
+  // financeira, quando não houver relação anterior entre eles, e a de avaliação
+  // do bem dado em garantia, bem como o ressarcimento de serviços prestados por
+  // terceiros, ficando vedada a cobrança pela confecção do cadastro na abertura
+  // de conta-corrente, bem como a de abertura de crédito (TAC) e de emissão de
+  // carnê (TEC), ou outra equivalente."
+  let tacItem: ItemEncargo | undefined;
+  if (tacCobrada !== undefined && tacCobrada > 0) {
+    alertas.push(
+      `TAC PROIBIDA: A Tarifa de Abertura de Crédito (TAC) é expressamente vedada pela STJ Súmula 566. ` +
+      `O valor de R$ ${tacCobrada.toFixed(2)} cobrado é nulo de pleno direito e deve ser restituído em dobro ` +
+      `(CDC, art. 42, parágrafo único; STJ REsp 1.251.331/RS — Recurso Repetitivo).`
+    );
+    tacItem = {
+      nome: "TAC — Tarifa de Abertura de Crédito",
+      valorCobrado: tacCobrada,
+      valorLegal: 0, // Proibida
+      excesso: tacCobrada,
+      status: "proibido",
+      fundamentacao: "STJ Súmula 566 — TAC vedada em contratos bancários",
+      sumula: "STJ Súmula 566",
+    };
+    encargos.push(tacItem);
+  }
+
+  // ── TEC ──────────────────────────────────────────────────────────────────────
+  let tecItem: ItemEncargo | undefined;
+  if (tecCobrada !== undefined && tecCobrada > 0) {
+    alertas.push(
+      `TEC PROIBIDA: A Tarifa de Emissão de Carnê (TEC) é expressamente vedada pela STJ Súmula 566. ` +
+      `O valor de R$ ${tecCobrada.toFixed(2)} cobrado é nulo de pleno direito e deve ser restituído em dobro ` +
+      `(CDC, art. 42, parágrafo único; STJ REsp 1.251.331/RS — Recurso Repetitivo).`
+    );
+    tecItem = {
+      nome: "TEC — Tarifa de Emissão de Carnê",
+      valorCobrado: tecCobrada,
+      valorLegal: 0, // Proibida
+      excesso: tecCobrada,
+      status: "proibido",
+      fundamentacao: "STJ Súmula 566 — TEC vedada em contratos bancários",
+      sumula: "STJ Súmula 566",
+    };
+    encargos.push(tecItem);
+  }
+
+  // ── Outras Tarifas ───────────────────────────────────────────────────────────
+  let outrasItem: ItemEncargo | undefined;
+  if (outrasTagas !== undefined && outrasTagas > 0) {
+    outrasItem = {
+      nome: "Outras Tarifas / Seguros",
+      valorCobrado: outrasTagas,
+      valorLegal: outrasTagas, // Presumidamente legais até análise específica
+      excesso: 0,
+      status: "legal",
+      fundamentacao: "Res. CMN 3.518/2007 — tarifas permitidas mediante contratação expressa",
+    };
+    encargos.push(outrasItem);
+  }
+
+  // ── CET — Custo Efetivo Total ─────────────────────────────────────────────────
+  // Res. CMN 3.517/2007: CET deve incluir taxa de juros + todos os encargos
+  // Fórmula: CET = [(1 + taxaJuros/100)^prazoAnos × (1 + encargos/principal)] - 1
+  const totalEncargos = encargos.reduce((s, e) => s + e.valorCobrado, 0);
+  const totalExcesso = encargos.reduce((s, e) => s + e.excesso, 0);
+
+  // CET nominal: taxa de juros + encargos como % do principal ao ano
+  const encargosPercentualAA = prazoAnos > 0 ? (totalEncargos / valorPrincipal) / prazoAnos * 100 : 0;
+  const cetNominal = taxaJurosAA + encargosPercentualAA;
+
+  // CET efetivo: capitalização composta considerando encargos no fluxo
+  // Aproximação: (1 + taxaJuros/100) × (1 + encargos/principal)^(1/prazoAnos) - 1
+  const fatorJuros = Math.pow(1 + taxaJurosAA / 100, prazoAnos);
+  const fatorEncargos = prazoAnos > 0 ? Math.pow(1 + totalEncargos / valorPrincipal, 1 / prazoAnos) : 1;
+  const cetEfetivo = prazoAnos > 0 ? (Math.pow(fatorJuros * fatorEncargos, 1 / prazoAnos) - 1) * 100 : taxaJurosAA;
+
+  // ── Memória de Cálculo ────────────────────────────────────────────────────────
+  const linhas: string[] = [
+    `ANÁLISE DE ENCARGOS ADICIONAIS — CUSTO EFETIVO TOTAL (CET)`,
+    `Fundamentação: Res. CMN 3.517/2007 (CET), STJ Súmula 566 (TAC/TEC), Decreto 6.306/2007 (IOF)`,
+    ``,
+    `DADOS DO CONTRATO:`,
+    `  Valor Principal (PV) = R$ ${valorPrincipal.toFixed(2)}`,
+    `  Taxa de Juros Nominal = ${taxaJurosAA.toFixed(4)}% a.a.`,
+    `  Prazo = ${prazoMeses} meses (${prazoAnos.toFixed(4)} anos)`,
+    ``,
+    `ENCARGOS COBRADOS:`,
+  ];
+
+  if (iofCobrado !== undefined && iofCobrado > 0) {
+    linhas.push(`  IOF cobrado = R$ ${iofCobrado.toFixed(2)} | IOF legal = R$ 0,00 (Decreto 6.306/2007) | Excesso = R$ ${iofCobrado.toFixed(2)}`);
+  }
+  if (tacCobrada !== undefined && tacCobrada > 0) {
+    linhas.push(`  TAC cobrada = R$ ${tacCobrada.toFixed(2)} | TAC legal = R$ 0,00 (STJ Súmula 566) | Excesso = R$ ${tacCobrada.toFixed(2)}`);
+  }
+  if (tecCobrada !== undefined && tecCobrada > 0) {
+    linhas.push(`  TEC cobrada = R$ ${tecCobrada.toFixed(2)} | TEC legal = R$ 0,00 (STJ Súmula 566) | Excesso = R$ ${tecCobrada.toFixed(2)}`);
+  }
+  if (outrasTagas !== undefined && outrasTagas > 0) {
+    linhas.push(`  Outras tarifas = R$ ${outrasTagas.toFixed(2)}`);
+  }
+
+  linhas.push(`  Total de Encargos Cobrados = R$ ${totalEncargos.toFixed(2)}`);
+  linhas.push(`  Total de Encargos Indevidos = R$ ${totalExcesso.toFixed(2)}`);
+  linhas.push(``);
+  linhas.push(`CÁLCULO DO CET (Custo Efetivo Total):`);
+  linhas.push(`  Encargos como % do Principal ao ano = (${totalEncargos.toFixed(2)} / ${valorPrincipal.toFixed(2)}) / ${prazoAnos.toFixed(4)} × 100 = ${encargosPercentualAA.toFixed(4)}% a.a.`);
+  linhas.push(`  CET Nominal = Taxa Juros + Encargos/ano = ${taxaJurosAA.toFixed(4)}% + ${encargosPercentualAA.toFixed(4)}% = ${cetNominal.toFixed(4)}% a.a.`);
+  linhas.push(`  CET Efetivo (capitalização composta) = ${cetEfetivo.toFixed(4)}% a.a.`);
+  linhas.push(`  Limite Legal (Decreto 22.626/33) = 12,0000% a.a.`);
+  if (cetEfetivo > 12) {
+    linhas.push(`  ⚠ CET ACIMA DO LIMITE LEGAL: ${cetEfetivo.toFixed(4)}% > 12,0000% — Excesso de ${(cetEfetivo - 12).toFixed(4)} pontos percentuais`);
+  }
+
+  return {
+    iof: iofItem,
+    tac: tacItem,
+    tec: tecItem,
+    outrasTagas: outrasItem,
+    totalEncargos,
+    totalExcesso,
+    cetNominal,
+    cetEfetivo,
+    alertas,
+    memoriaCalculo: linhas.join("\n"),
   };
 }

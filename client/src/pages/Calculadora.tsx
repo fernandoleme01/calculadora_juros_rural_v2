@@ -40,6 +40,11 @@ const formSchema = z.object({
   valorParcelaPaga: z.coerce.number().positive().optional(),
   saldoDevedorBanco: z.coerce.number().positive().optional(),
   periodicidadeParcela: z.enum(["mensal", "anual"]).default("anual"),
+  // Encargos adicionais
+  iofCobrado: z.coerce.number().min(0).optional(),
+  tacCobrada: z.coerce.number().min(0).optional(),
+  tecCobrada: z.coerce.number().min(0).optional(),
+  outrasTagas: z.coerce.number().min(0).optional(),
   salvar: z.boolean().default(true),
 });
 
