@@ -225,7 +225,7 @@ export default function LandingPage() {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-sm mb-6">
               <Shield className="h-3.5 w-3.5 text-amber-400" />
-              <span>Em conformidade com a Lei 4.829/65 · DL 167/67 · Resoluções CMN</span>
+              <span>Em conformidade com a Lei 4.829/65 · DL 167/67 · Resoluções CMN · Manual de Crédito Rural · Jurisprudências</span>
             </div>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6" style={{fontFamily: "Merriweather, serif"}}>

@@ -206,3 +206,6 @@
 ## Correção de Navegação
 - [x] Corrigir redirecionamento automático: ao acessar "/" o sistema vai direto para /app sem mostrar a landing page
 - [x] Landing page deve ser exibida sempre, com botão "Entrar" que redireciona para /app (ou login se não autenticado)
+
+## Ajustes Visuais / Textuais
+- [x] Atualizar badge de conformidade na landing page para incluir Manual de Crédito Rural e Jurisprudências
