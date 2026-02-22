@@ -243,3 +243,8 @@
 ## Integração Dados BCB (TR, TJLP, Taxa Crédito Rural)
 - [x] Adicionar TR (SGS 226), TJLP (SGS 256) e Taxa Média Crédito Rural (SGS 20714) à página Dados do BCB
 - [x] Adicionar CDI Mês (BCB SGS 4391) ao backend e frontend da página Dados do BCB
+
+## Calculadora de Impacto de Indexadores (Dados do BCB)
+- [x] Calculadora interativa na página Dados do BCB: valor do contrato + período + indexador → valor final, juros totais, excesso vs. limite legal
+- [x] Comparativo visual lado a lado de todos os indexadores para o mesmo contrato
+- [x] Indicação de qual indexador resulta em menor custo (mais favorável ao devedor)

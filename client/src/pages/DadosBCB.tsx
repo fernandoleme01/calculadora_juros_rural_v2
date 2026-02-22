@@ -2,8 +2,11 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw, TrendingUp, TrendingDown, DollarSign, BarChart3, Landmark, AlertCircle, Percent } from "lucide-react";
-import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, RefreshCw, TrendingUp, TrendingDown, DollarSign, BarChart3, Landmark, AlertCircle, Percent, Calculator, CheckCircle2, XCircle } from "lucide-react";
+import { useState, useMemo } from "react";
 
 export default function DadosBCB() {
   const [refetchKey, setRefetchKey] = useState(0);
@@ -19,6 +22,155 @@ export default function DadosBCB() {
     setRefetchKey(k => k + 1);
     refetch();
   };
+
+  // ─── Estado da Calculadora de Indexadores ─────────────────────────────────
+  const [calcValor, setCalcValor] = useState("100000");
+  const [calcMeses, setCalcMeses] = useState("12");
+  const [calcIndexador, setCalcIndexador] = useState("todos");
+
+  // Monta a lista de indexadores disponíveis com taxas reais do BCB
+  const indexadores = useMemo(() => {
+    if (!data) return [];
+    const limiteAnual = 12; // % a.a. — Decreto 22.626/33 + Súmula 382/STJ
+
+    const taxaMensalParaAnual = (mensal: number) =>
+      (Math.pow(1 + mensal / 100, 12) - 1) * 100;
+
+    const selicMensal = data.selic.anualizada != null
+      ? (Math.pow(1 + data.selic.anualizada / 100, 1 / 12) - 1) * 100
+      : null;
+
+    const ipcaUltimo = data.ipca.mensal.length > 0
+      ? parseFloat(String(data.ipca.mensal[data.ipca.mensal.length - 1].valor))
+      : null;
+
+    const trUltimo = data.tr?.atual?.valor != null
+      ? parseFloat(String(data.tr.atual.valor))
+      : null;
+
+    const tjlpAnual = data.tjlp?.atual?.valor != null
+      ? parseFloat(String(data.tjlp.atual.valor))
+      : null;
+
+    const igpmUltimo = data.igpm?.atual?.valor != null
+      ? parseFloat(String(data.igpm.atual.valor))
+      : null;
+
+    const cdiUltimo = data.cdi?.atual?.valor != null
+      ? parseFloat(String(data.cdi.atual.valor))
+      : null;
+
+    return [
+      {
+        id: "selic",
+        nome: "SELIC",
+        taxaMensal: selicMensal,
+        taxaAnual: data.selic.anualizada,
+        cor: "text-primary",
+        corBg: "bg-primary/10",
+        corBorda: "border-l-primary",
+        descricao: "Taxa básica de juros — referência para contratos pós-fixados",
+        serie: "BCB SGS 11",
+      },
+      {
+        id: "ipca",
+        nome: "IPCA",
+        taxaMensal: ipcaUltimo,
+        taxaAnual: ipcaUltimo != null ? taxaMensalParaAnual(ipcaUltimo) : null,
+        cor: "text-amber-600",
+        corBg: "bg-amber-50",
+        corBorda: "border-l-amber-500",
+        descricao: "Inflação oficial — base para TCRpós em crédito rural",
+        serie: "BCB SGS 433",
+      },
+      {
+        id: "tr",
+        nome: "TR",
+        taxaMensal: trUltimo,
+        taxaAnual: trUltimo != null ? taxaMensalParaAnual(trUltimo) : null,
+        cor: "text-violet-700",
+        corBg: "bg-violet-50",
+        corBorda: "border-l-violet-500",
+        descricao: "Taxa Referencial — contratos rurais pós-fixados com TR",
+        serie: "BCB SGS 226",
+      },
+      {
+        id: "tjlp",
+        nome: "TJLP",
+        taxaMensal: tjlpAnual != null ? (Math.pow(1 + tjlpAnual / 100, 1 / 12) - 1) * 100 : null,
+        taxaAnual: tjlpAnual,
+        cor: "text-orange-700",
+        corBg: "bg-orange-50",
+        corBorda: "border-l-orange-500",
+        descricao: "Taxa de Juros de Longo Prazo — BNDES / Pronaf Investimento",
+        serie: "BCB SGS 256",
+      },
+      {
+        id: "igpm",
+        nome: "IGP-M",
+        taxaMensal: igpmUltimo,
+        taxaAnual: igpmUltimo != null ? taxaMensalParaAnual(igpmUltimo) : null,
+        cor: "text-teal-700",
+        corBg: "bg-teal-50",
+        corBorda: "border-l-teal-500",
+        descricao: "Índice Geral de Preços — correção em contratos de longo prazo",
+        serie: "BCB SGS 189",
+      },
+      {
+        id: "cdi",
+        nome: "CDI",
+        taxaMensal: cdiUltimo,
+        taxaAnual: cdiUltimo != null ? taxaMensalParaAnual(cdiUltimo) : null,
+        cor: "text-sky-700",
+        corBg: "bg-sky-50",
+        corBorda: "border-l-sky-500",
+        descricao: "Certificado de Depósito Interbancário — recursos livres",
+        serie: "BCB SGS 4391",
+      },
+      {
+        id: "limite_legal",
+        nome: "Limite Legal (12% a.a.)",
+        taxaMensal: (Math.pow(1 + limiteAnual / 100, 1 / 12) - 1) * 100,
+        taxaAnual: limiteAnual,
+        cor: "text-green-700",
+        corBg: "bg-green-50",
+        corBorda: "border-l-green-600",
+        descricao: "Teto legal — Decreto 22.626/33 + Súmula 382/STJ",
+        serie: "Decreto 22.626/33",
+      },
+    ];
+  }, [data]);
+
+  // Cálculo do impacto para cada indexador
+  const resultadosCalc = useMemo(() => {
+    const valor = parseFloat(calcValor.replace(/\./g, "").replace(",", "."));
+    const meses = parseInt(calcMeses);
+    if (isNaN(valor) || valor <= 0 || isNaN(meses) || meses <= 0) return [];
+
+    const limiteAnual = 12;
+    const limiteMensal = (Math.pow(1 + limiteAnual / 100, 1 / 12) - 1) * 100;
+    const valorComLimite = valor * Math.pow(1 + limiteMensal / 100, meses);
+    const jurosLimite = valorComLimite - valor;
+
+    return indexadores
+      .filter(idx => calcIndexador === "todos" || idx.id === calcIndexador)
+      .map(idx => {
+        if (idx.taxaMensal == null) return null;
+        const valorFinal = valor * Math.pow(1 + idx.taxaMensal / 100, meses);
+        const jurosTotal = valorFinal - valor;
+        const excesso = jurosTotal - jurosLimite;
+        const taxaEfetiva = (Math.pow(1 + idx.taxaMensal / 100, 12) - 1) * 100;
+        const dentroDoLimite = taxaEfetiva <= 12.001; // tolerância de arredondamento
+        return { ...idx, valorFinal, jurosTotal, excesso, taxaEfetiva, dentroDoLimite };
+      })
+      .filter(Boolean) as Array<typeof indexadores[0] & {
+        valorFinal: number;
+        jurosTotal: number;
+        excesso: number;
+        taxaEfetiva: number;
+        dentroDoLimite: boolean;
+      }>;
+  }, [indexadores, calcValor, calcMeses, calcIndexador]);
 
   const formatPct = (v?: number | string | null) => {
     if (v == null) return "N/D";
@@ -254,6 +406,153 @@ export default function DadosBCB() {
               </div>
             </CardContent>
           </Card>
+
+          {/* ─── CALCULADORA DE IMPACTO DE INDEXADORES ─── */}
+          {indexadores.length > 0 && (
+            <Card className="border-2 border-primary/20">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Calculator className="h-5 w-5 text-primary" />
+                  Simulador de Impacto de Indexadores
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Simule o efeito de cada indexador sobre o valor do contrato e compare com o limite legal de 12% a.a.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Formulário de entrada */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-lg bg-muted/30 border">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="calc-valor" className="text-sm font-medium">Valor do Contrato (R$)</Label>
+                    <Input
+                      id="calc-valor"
+                      type="text"
+                      value={calcValor}
+                      onChange={e => setCalcValor(e.target.value.replace(/[^0-9.,]/g, ""))}
+                      placeholder="Ex: 100.000"
+                      className="font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="calc-meses" className="text-sm font-medium">Período (meses)</Label>
+                    <Input
+                      id="calc-meses"
+                      type="number"
+                      min="1"
+                      max="360"
+                      value={calcMeses}
+                      onChange={e => setCalcMeses(e.target.value)}
+                      placeholder="Ex: 12"
+                      className="font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="calc-indexador" className="text-sm font-medium">Indexador</Label>
+                    <Select value={calcIndexador} onValueChange={setCalcIndexador}>
+                      <SelectTrigger id="calc-indexador">
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos os indexadores</SelectItem>
+                        {indexadores.map(idx => (
+                          <SelectItem key={idx.id} value={idx.id}>{idx.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Resultados */}
+                {resultadosCalc.length > 0 && (() => {
+                  const melhor = resultadosCalc.reduce((a, b) =>
+                    (a.jurosTotal ?? Infinity) < (b.jurosTotal ?? Infinity) ? a : b
+                  );
+                  return (
+                    <div className="space-y-3">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left py-2 px-3 font-medium text-muted-foreground">Indexador</th>
+                              <th className="text-right py-2 px-3 font-medium text-muted-foreground">Taxa Efetiva (a.a.)</th>
+                              <th className="text-right py-2 px-3 font-medium text-muted-foreground">Valor Final</th>
+                              <th className="text-right py-2 px-3 font-medium text-muted-foreground">Juros Totais</th>
+                              <th className="text-right py-2 px-3 font-medium text-muted-foreground">Excesso vs. Limite</th>
+                              <th className="text-center py-2 px-3 font-medium text-muted-foreground">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {resultadosCalc.map(res => (
+                              <tr
+                                key={res.id}
+                                className={`border-b last:border-0 hover:bg-muted/30 ${
+                                  res.id === melhor.id ? "bg-green-50/60" : ""
+                                }`}
+                              >
+                                <td className="py-2.5 px-3">
+                                  <div className="flex items-center gap-2">
+                                    <span className={`font-semibold ${res.cor}`}>{res.nome}</span>
+                                    {res.id === melhor.id && (
+                                      <Badge className="text-xs bg-green-100 text-green-700 border-green-300" variant="outline">
+                                        Mais favorável
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">{res.descricao}</p>
+                                </td>
+                                <td className={`py-2.5 px-3 text-right font-mono font-semibold ${res.cor}`}>
+                                  {res.taxaEfetiva.toFixed(2)}% a.a.
+                                </td>
+                                <td className="py-2.5 px-3 text-right font-mono">
+                                  R$ {res.valorFinal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                                <td className="py-2.5 px-3 text-right font-mono">
+                                  R$ {res.jurosTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                                <td className={`py-2.5 px-3 text-right font-mono font-semibold ${
+                                  res.excesso > 0 ? "text-red-600" : "text-green-600"
+                                }`}>
+                                  {res.excesso > 0
+                                    ? `+ R$ ${res.excesso.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                    : res.id === "limite_legal" ? "—" : `- R$ ${Math.abs(res.excesso).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                  }
+                                </td>
+                                <td className="py-2.5 px-3 text-center">
+                                  {res.dentroDoLimite
+                                    ? <CheckCircle2 className="h-5 w-5 text-green-500 inline" />
+                                    : <XCircle className="h-5 w-5 text-red-500 inline" />
+                                  }
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Resumo jurídico */}
+                      {resultadosCalc.some(r => !r.dentroDoLimite && r.id !== "limite_legal") && (
+                        <div className="p-3 rounded-lg bg-red-50 border border-red-200">
+                          <p className="text-xs font-semibold text-red-700 mb-1">Alerta Jurídico</p>
+                          <p className="text-xs text-red-600 leading-relaxed">
+                            Os indexadores marcados com ❌ resultam em taxa efetiva superior a 12% a.a.,
+                            configurando cobrança acima do limite legal (Decreto nº 22.626/33, art. 1º;
+                            Súmula 382/STJ). O excesso é passivo de revisão judicial e restitução ao devedor.
+                            Para contratos com recursos obrigatórios, o limite é de 14% a.a. (MCR 7-1, Tabela 1).
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {resultadosCalc.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Preencha o valor e o período acima para ver a simulação.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* IPCA Histórico */}
           {data.ipca.mensal.length > 0 && (
