@@ -20,6 +20,13 @@ import {
   FATORES_PROGRAMA,
 } from "./calculoTcr";
 import { invokeLLM } from "./_core/llm";
+import { buscarDadosBCB, buscarIPCAMensal } from "./bancoCentral";
+import {
+  gerarLaudoTecnicoJuridico,
+  gerarPeticaoRevisaoContratual,
+  JURISPRUDENCIA_CREDITO_RURAL,
+  type DadosContrato,
+} from "./geradorPeticao";
 
 // ─── Schema de Validação ─────────────────────────────────────────────────────
 
@@ -201,6 +208,136 @@ Fundamente o parecer na Lei nº 4.829/65, Decreto-Lei nº 167/67, Decreto nº 22
         return {
           parecer: response.choices[0]?.message?.content ?? "Não foi possível gerar o parecer.",
         };
+      }),
+  }),
+
+  // ─── Banco Central (BCB) ─────────────────────────────────────────────────
+  bcb: router({
+
+    // Buscar todos os dados atualizados do BCB
+    dadosAtualizados: publicProcedure.query(async () => {
+      return await buscarDadosBCB();
+    }),
+
+    // Buscar IPCA mensal para uso no cálculo TCR
+    ipcaMensal: publicProcedure
+      .input(z.object({ meses: z.number().int().min(1).max(60).default(24) }))
+      .query(async ({ input }) => {
+        return await buscarIPCAMensal(input.meses);
+      }),
+
+    // Jurisprudência real com números de processos
+    jurisprudenciaReal: publicProcedure.query(() => JURISPRUDENCIA_CREDITO_RURAL),
+  }),
+
+  // ─── Laudo Técnico-Jurídico ───────────────────────────────────────────────
+  laudo: router({
+
+    gerar: publicProcedure
+      .input(z.object({
+        nomeAutor: z.string(),
+        nacionalidade: z.string().default("brasileiro(a)"),
+        estadoCivil: z.string().default("a informar"),
+        cpf: z.string().default(""),
+        rg: z.string().default(""),
+        endereco: z.string().default(""),
+        nomePropriedade: z.string().default(""),
+        municipioPropriedade: z.string().default(""),
+        uf: z.string().default(""),
+        nomeBanco: z.string(),
+        cnpjBanco: z.string().default(""),
+        enderecoBanco: z.string().default(""),
+        numeroContrato: z.string(),
+        dataContratacao: z.string(),
+        valorCredito: z.number().positive(),
+        dataVencimento: z.string(),
+        modalidade: z.enum(["custeio", "investimento", "comercializacao"]),
+        cultura: z.string().default(""),
+        anoSafra: z.string().default(""),
+        taxaJurosContratada: z.number(),
+        taxaJurosMoraContratada: z.number().default(1),
+        garantias: z.string().default(""),
+        tipoEvento: z.string().default(""),
+        descricaoEvento: z.string().default(""),
+        dataComunicacaoBanco: z.string().default(""),
+        descricaoPropostaRenegociacao: z.string().default(""),
+        nomeAdvogado: z.string().default(""),
+        oab: z.string().default(""),
+        telefoneAdvogado: z.string().default(""),
+        emailAdvogado: z.string().default(""),
+        enderecoEscritorio: z.string().default(""),
+        comarca: z.string().default(""),
+        vara: z.string().default(""),
+        saldoDevedor: z.number().optional(),
+        saldoDevedorRevisado: z.number().optional(),
+        excessoJuros: z.number().optional(),
+        taxaLegalMaxima: z.number().optional(),
+        ipcaAcumulado: z.number().optional(),
+        selicAtual: z.number().optional(),
+        usdAtual: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        // Buscar dados atualizados do BCB para enriquecer o laudo
+        let dadosBCB;
+        try {
+          const bcb = await buscarDadosBCB();
+          dadosBCB = {
+            ipcaAcumulado12m: bcb.ipca.acumulado12m?.valor,
+            selicAnualizada: bcb.selic.anualizada?.toFixed(2),
+            taxaMediaCreditoRural: bcb.creditoRural.taxaMedia[bcb.creditoRural.taxaMedia.length - 1]?.valor,
+            usdVenda: bcb.cambio.usdVenda?.toFixed(4),
+          };
+        } catch {
+          dadosBCB = undefined;
+        }
+        return await gerarLaudoTecnicoJuridico(input as DadosContrato, dadosBCB);
+      }),
+  }),
+
+  // ─── Petição de Revisão Contratual ───────────────────────────────────────
+  peticao: router({
+
+    gerar: publicProcedure
+      .input(z.object({
+        nomeAutor: z.string(),
+        nacionalidade: z.string().default("brasileiro(a)"),
+        estadoCivil: z.string().default("a informar"),
+        cpf: z.string(),
+        rg: z.string().default(""),
+        endereco: z.string(),
+        nomePropriedade: z.string(),
+        municipioPropriedade: z.string(),
+        uf: z.string(),
+        nomeBanco: z.string(),
+        cnpjBanco: z.string(),
+        enderecoBanco: z.string().default(""),
+        numeroContrato: z.string(),
+        dataContratacao: z.string(),
+        valorCredito: z.number().positive(),
+        dataVencimento: z.string(),
+        modalidade: z.enum(["custeio", "investimento", "comercializacao"]),
+        cultura: z.string(),
+        anoSafra: z.string(),
+        taxaJurosContratada: z.number(),
+        taxaJurosMoraContratada: z.number().default(1),
+        garantias: z.string(),
+        tipoEvento: z.string(),
+        descricaoEvento: z.string(),
+        dataComunicacaoBanco: z.string(),
+        descricaoPropostaRenegociacao: z.string(),
+        nomeAdvogado: z.string(),
+        oab: z.string(),
+        telefoneAdvogado: z.string().default(""),
+        emailAdvogado: z.string().default(""),
+        enderecoEscritorio: z.string(),
+        comarca: z.string(),
+        vara: z.string().default("[VARA]"),
+        saldoDevedor: z.number().optional(),
+        saldoDevedorRevisado: z.number().optional(),
+        excessoJuros: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return await gerarPeticaoRevisaoContratual(input as DadosContrato);
       }),
   }),
 

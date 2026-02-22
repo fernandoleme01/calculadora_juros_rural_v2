@@ -9,6 +9,9 @@ import Calculadora from "./pages/Calculadora";
 import Resultado from "./pages/Resultado";
 import Historico from "./pages/Historico";
 import FundamentacaoLegal from "./pages/FundamentacaoLegal";
+import AnalisarContrato from "./pages/AnalisarContrato";
+import DadosBCB from "./pages/DadosBCB";
+import GeradorPeticao from "./pages/GeradorPeticao";
 import DashboardLayout from "./components/DashboardLayout";
 
 function Router() {
@@ -20,6 +23,9 @@ function Router() {
         <Route path="/resultado" component={Resultado} />
         <Route path="/historico" component={Historico} />
         <Route path="/fundamentacao" component={FundamentacaoLegal} />
+        <Route path="/analisar-contrato" component={AnalisarContrato} />
+        <Route path="/dados-bcb" component={DadosBCB} />
+        <Route path="/gerador-peticao" component={GeradorPeticao} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>

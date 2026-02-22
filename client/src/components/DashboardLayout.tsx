@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Calculator, History, BookOpen, Scale } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Calculator, History, BookOpen, Scale, FileSearch, Landmark, Gavel } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -30,6 +30,9 @@ import { Button } from "./ui/button";
 const menuItems = [
   { icon: LayoutDashboard, label: "Painel Principal", path: "/" },
   { icon: Calculator, label: "Calculadora TCR", path: "/calculadora" },
+  { icon: FileSearch, label: "Analisar Contrato PDF", path: "/analisar-contrato" },
+  { icon: Gavel, label: "Gerar Petição / Laudo", path: "/gerador-peticao" },
+  { icon: Landmark, label: "Dados do BCB", path: "/dados-bcb" },
   { icon: History, label: "Histórico", path: "/historico" },
   { icon: BookOpen, label: "Fundamentação Legal", path: "/fundamentacao" },
 ];
