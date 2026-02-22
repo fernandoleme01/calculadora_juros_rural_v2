@@ -576,6 +576,13 @@ Fundamente o parecer na Lei nº 4.829/65, Decreto-Lei nº 167/67, Decreto nº 22
         sistema: z.enum(["price", "sac", "saf"]),
         periodicidade: z.enum(["anual", "mensal"]),
         valoresPagos: z.array(z.number()).optional(),
+        // Modalidade para aplicar o limite legal correto (MCR 7-1, Tabela 1)
+        modalidade: z.enum([
+          "custeio_obrigatorio", "custeio_livre", "investimento_subvencionado",
+          "investimento_livre", "comercializacao", "industrializacao",
+          "pronaf_b", "pronaf_custeio", "pronaf_investimento", "pronaf_agroecologia",
+          "pronamp_custeio", "pronamp_investimento", "nao_controlado"
+        ]).optional(),
       }))
       .mutation(({ input }) => {
         return calcularAmortizacao({
@@ -586,6 +593,7 @@ Fundamente o parecer na Lei nº 4.829/65, Decreto-Lei nº 167/67, Decreto nº 22
           sistema: input.sistema as SistemaAmortizacao,
           periodicidade: input.periodicidade as PeriodicidadeParcela,
           valoresPagos: input.valoresPagos,
+          modalidade: input.modalidade as import("./limitesLegais").ModalidadeCredito | undefined,
         });
       }),
   }),

@@ -2,7 +2,7 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw, TrendingUp, TrendingDown, DollarSign, BarChart3, Landmark, AlertCircle } from "lucide-react";
+import { Loader2, RefreshCw, TrendingUp, TrendingDown, DollarSign, BarChart3, Landmark, AlertCircle, Percent } from "lucide-react";
 import { useState } from "react";
 
 export default function DadosBCB() {
@@ -39,7 +39,7 @@ export default function DadosBCB() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Indicadores do Banco Central</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Dados atualizados em tempo real via API do BCB — SELIC, IPCA, Câmbio e Crédito Rural
+            Dados atualizados em tempo real via API do BCB — SELIC, IPCA, TR, TJLP, IGP-M, Câmbio e Crédito Rural
           </p>
         </div>
         <Button variant="outline" onClick={handleRefresh} disabled={isLoading} className="gap-2">
@@ -144,6 +144,81 @@ export default function DadosBCB() {
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">taxa média (% a.a.)</p>
                 <Badge variant="outline" className="mt-2 text-xs">BCB Série 20714</Badge>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Cards Secundários: TR, TJLP, IGP-M */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* TR */}
+            <Card className="border-l-4 border-l-violet-500">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Percent className="h-4 w-4" />
+                  Taxa Referencial (TR)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-violet-700">
+                  {data.tr?.atual?.valor != null ? `${data.tr.atual.valor}%` : "N/D"}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">mensal — último período</p>
+                <p className="text-xs text-muted-foreground">Usada em contratos pós-fixados com TR</p>
+                <Badge variant="outline" className="mt-2 text-xs">BCB Série 226</Badge>
+              </CardContent>
+            </Card>
+
+            {/* TJLP */}
+            <Card className="border-l-4 border-l-orange-500">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  TJLP
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-700">
+                  {data.tjlp?.atual?.valor != null ? `${data.tjlp.atual.valor}%` : "N/D"}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">ao ano — último período</p>
+                <p className="text-xs text-muted-foreground">BNDES / Pronaf Investimento</p>
+                <Badge variant="outline" className="mt-2 text-xs">BCB Série 256</Badge>
+              </CardContent>
+            </Card>
+
+            {/* IGP-M */}
+            <Card className="border-l-4 border-l-teal-500">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  IGP-M
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-teal-700">
+                  {data.igpm?.atual?.valor != null ? `${data.igpm.atual.valor}%` : "N/D"}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">mensal — último período</p>
+                <p className="text-xs text-muted-foreground">Índice de correção em contratos rurais</p>
+                <Badge variant="outline" className="mt-2 text-xs">BCB Série 189</Badge>
+              </CardContent>
+            </Card>
+
+            {/* CDI */}
+            <Card className="border-l-4 border-l-sky-500">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Percent className="h-4 w-4" />
+                  CDI
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-sky-700">
+                  {data.cdi?.atual?.valor != null ? `${data.cdi.atual.valor}%` : "N/D"}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">mensal — último período</p>
+                <p className="text-xs text-muted-foreground">Indexador em operações com recursos livres</p>
+                <Badge variant="outline" className="mt-2 text-xs">BCB Série 4391</Badge>
               </CardContent>
             </Card>
           </div>
@@ -265,6 +340,85 @@ export default function DadosBCB() {
                     </tbody>
                   </table>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Tabela Comparativa: TR, TJLP, IGP-M, CDI */}
+          {(data.tr?.mensal?.length > 0 || data.tjlp?.mensal?.length > 0 || data.igpm?.mensal?.length > 0 || data.cdi?.mensal?.length > 0) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base font-semibold">Indexadores de Contratos Rurais — Histórico Comparativo</CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Fonte: BCB SGS — TR (226), TJLP (256), IGP-M (189), CDI (4391) | Últimos 12 meses
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2 px-3 font-medium text-muted-foreground">Período</th>
+                        <th className="text-right py-2 px-3 font-medium text-muted-foreground">
+                          <span className="text-violet-600">TR (%)</span>
+                        </th>
+                        <th className="text-right py-2 px-3 font-medium text-muted-foreground">
+                          <span className="text-orange-600">TJLP (%)</span>
+                        </th>
+                        <th className="text-right py-2 px-3 font-medium text-muted-foreground">
+                          <span className="text-teal-600">IGP-M (%)</span>
+                        </th>
+                        <th className="text-right py-2 px-3 font-medium text-muted-foreground">
+                          <span className="text-sky-600">CDI (%)</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        // Unir todas as datas únicas e ordenar do mais recente
+                        const todasDatas = Array.from(new Set([
+                          ...(data.tr?.mensal ?? []).map(d => d.data),
+                          ...(data.tjlp?.mensal ?? []).map(d => d.data),
+                          ...(data.igpm?.mensal ?? []).map(d => d.data),
+                          ...(data.cdi?.mensal ?? []).map(d => d.data),
+                        ])).sort((a, b) => {
+                          const [da, ma, ya] = a.split('/').map(Number);
+                          const [db, mb, yb] = b.split('/').map(Number);
+                          return new Date(yb, mb-1, db).getTime() - new Date(ya, ma-1, da).getTime();
+                        }).slice(0, 12);
+
+                        const trMap = Object.fromEntries((data.tr?.mensal ?? []).map(d => [d.data, d.valor]));
+                        const tjlpMap = Object.fromEntries((data.tjlp?.mensal ?? []).map(d => [d.data, d.valor]));
+                        const igpmMap = Object.fromEntries((data.igpm?.mensal ?? []).map(d => [d.data, d.valor]));
+                        const cdiMap = Object.fromEntries((data.cdi?.mensal ?? []).map(d => [d.data, d.valor]));
+
+                        return todasDatas.map(data => (
+                          <tr key={data} className="border-b last:border-0 hover:bg-muted/30">
+                            <td className="py-2 px-3 text-foreground font-medium">{data}</td>
+                            <td className="py-2 px-3 text-right font-mono text-violet-700">
+                              {trMap[data] != null ? `${trMap[data]}%` : <span className="text-muted-foreground/40">—</span>}
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-orange-700">
+                              {tjlpMap[data] != null ? `${tjlpMap[data]}%` : <span className="text-muted-foreground/40">—</span>}
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-teal-700">
+                              {igpmMap[data] != null ? `${igpmMap[data]}%` : <span className="text-muted-foreground/40">—</span>}
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-sky-700">
+                              {cdiMap[data] != null ? `${cdiMap[data]}%` : <span className="text-muted-foreground/40">—</span>}
+                            </td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
+                  <strong>Uso jurídico:</strong> A TR e o CDI são frequentemente utilizados como indexadores em contratos rurais com recursos livres.
+                  A TJLP é a taxa de referência para financiamentos do BNDES e Pronaf Investimento.
+                  O IGP-M pode ser contratado como índice de correção monetária em operações de longo prazo.
+                  Qualquer indexador que resulte em taxa efetiva superior ao limite legal (MCR 7-1) pode ser objeto de revisão judicial.
+                </p>
               </CardContent>
             </Card>
           )}

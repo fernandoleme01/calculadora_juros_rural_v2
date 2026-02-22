@@ -78,7 +78,7 @@ export default function DashboardLayout({
                 <Scale className="h-7 w-7 text-primary" />
               </div>
               <h1 className="text-2xl font-bold tracking-tight text-center" style={{fontFamily: 'Merriweather, serif'}}>
-                JurosRurais.pro
+                Juros Rurais Pro
               </h1>
             </div>
             <div className="flex flex-col items-center gap-2">
@@ -194,7 +194,7 @@ function DashboardLayoutContent({
                 <div className="flex items-center gap-2 min-w-0">
                   <Scale className="h-4 w-4 text-accent shrink-0" />
                   <span className="font-semibold tracking-tight truncate text-sidebar-foreground text-sm">
-                    Juros Rural
+                    Juros Rurais Pro
                   </span>
                 </div>
               ) : null}

@@ -209,3 +209,37 @@
 
 ## Ajustes Visuais / Textuais
 - [x] Atualizar badge de conformidade na landing page para incluir Manual de Crédito Rural e Jurisprudências
+
+## Melhorias baseadas no MCR (Manual de Crédito Rural)
+
+### 1. Limites Legais por Modalidade (MCR 7-1)
+- [ ] Criar módulo `limitesLegais.ts` com tabela de taxas máximas por modalidade (MCR 7-1, Tabela 1)
+- [ ] Custeio com recursos obrigatórios: 14% a.a. (Res. CMN 5.234)
+- [ ] Investimento subvencionado: 12,5% a.a. (Res. CMN 5.234)
+- [ ] Recursos não controlados: livre pactuação (mas sujeito à Lei de Usura para o STJ)
+- [ ] Pronaf custeio: 5% a.a. (MCR 7-6)
+- [ ] Pronaf microcrédito (Grupo B): 3% a.a. (MCR 7-6)
+- [ ] Atualizar calculadora TCR para usar limite correto por modalidade
+- [ ] Atualizar módulo de amortização para usar limite correto por modalidade
+- [ ] Atualizar laudos e petições para citar o limite correto por modalidade
+
+### 2. Módulo Pronaf (MCR 7-6)
+- [ ] Criar página `/app/pronaf` com formulário específico para contratos Pronaf
+- [ ] Identificar grupo do beneficiário (A, B, C, D, E, V, Agroindústria, etc.)
+- [ ] Calcular taxa máxima permitida por grupo e finalidade
+- [ ] Comparar taxa contratada vs. taxa máxima do Pronaf
+- [ ] Gerar laudo específico para revisão de contratos Pronaf
+- [ ] Adicionar item de menu "Pronaf" no DashboardLayout
+
+### 3. Fundamentação dos Laudos com Citações do MCR
+- [ ] Atualizar `geradorPeticao.ts` para incluir citações do MCR (seção, item, resolução)
+- [ ] Atualizar `analiseCadeia.ts` para incluir citações do MCR nos alertas
+- [ ] Atualizar `calculoTcr.ts` para referenciar MCR 2-4 (metodologia TCR)
+- [ ] Atualizar `amortizacao.ts` para referenciar MCR 2-6 (reembolso) e MCR 7-1 (encargos)
+
+## Identidade Visual / Nome da Plataforma
+- [x] Substituir todas as ocorrências de nomes incorretos por "Juros Rurais Pro" em todos os arquivos
+
+## Integração Dados BCB (TR, TJLP, Taxa Crédito Rural)
+- [x] Adicionar TR (SGS 226), TJLP (SGS 256) e Taxa Média Crédito Rural (SGS 20714) à página Dados do BCB
+- [x] Adicionar CDI Mês (BCB SGS 4391) ao backend e frontend da página Dados do BCB

@@ -34,6 +34,10 @@ export const SGS = {
   CREDITO_RURAL_TAXA_MEDIA: 20714,
   CREDITO_RURAL_SALDO: 20715,
   CREDITO_PF_TAXA_MEDIA: 20716,
+  TR_MENSAL: 226,        // Taxa Referencial — usada em contratos rurais pós-fixados com TR
+  TJLP_MENSAL: 256,      // Taxa de Juros de Longo Prazo — BNDES/Pronaf investimento
+  IGPM_MENSAL: 189,      // IGP-M — índice de correção em alguns contratos rurais
+  CDI_MENSAL: 4391,      // CDI mensal — indexador em operações com recursos livres
 } as const;
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -70,6 +74,23 @@ export interface DadosBCBCompleto {
     usdCompra: number | null;
     usdVenda: number | null;
     dataHora: string | null;
+  };
+  // Novos índices relevantes para crédito rural
+  tr: {
+    mensal: DadoBCB[];           // últimos 12 meses — Taxa Referencial
+    atual: DadoBCB | null;       // valor mais recente
+  };
+  tjlp: {
+    mensal: DadoBCB[];           // últimos 12 meses — TJLP (BNDES/Pronaf)
+    atual: DadoBCB | null;       // valor mais recente
+  };
+  igpm: {
+    mensal: DadoBCB[];           // últimos 12 meses — IGP-M
+    atual: DadoBCB | null;       // valor mais recente
+  };
+  cdi: {
+    mensal: DadoBCB[];           // últimos 12 meses — CDI mensal
+    atual: DadoBCB | null;       // valor mais recente
   };
   resolucoesCMN: ResolucaoCMN[];
   dataConsulta: string;
@@ -203,6 +224,10 @@ export async function buscarDadosBCB(): Promise<DadosBCBCompleto> {
     creditoRuralSaldo,
     creditoPFTaxa,
     cotacaoDolar,
+    trMensal,
+    tjlpMensal,
+    igpmMensal,
+    cdiMensal,
   ] = await Promise.allSettled([
     buscarSerie(SGS.SELIC_DIARIA, 5),
     buscarSerie(SGS.IPCA_MENSAL, 24),
@@ -212,6 +237,10 @@ export async function buscarDadosBCB(): Promise<DadosBCBCompleto> {
     buscarSerie(SGS.CREDITO_RURAL_SALDO, 1),
     buscarSerie(SGS.CREDITO_PF_TAXA_MEDIA, 6),
     buscarCotacaoDolar(),
+    buscarSerie(SGS.TR_MENSAL, 12),
+    buscarSerie(SGS.TJLP_MENSAL, 12),
+    buscarSerie(SGS.IGPM_MENSAL, 12),
+    buscarSerie(SGS.CDI_MENSAL, 12),
   ]);
 
   const get = <T>(result: PromiseSettledResult<T>, fallback: T, nome: string): T => {
@@ -228,6 +257,10 @@ export async function buscarDadosBCB(): Promise<DadosBCBCompleto> {
   const crSaldo = get(creditoRuralSaldo, [], "Saldo crédito rural");
   const pfTaxa = get(creditoPFTaxa, [], "Taxa crédito PF");
   const ptax = get(cotacaoDolar, null, "Cotação USD");
+  const trDados = get(trMensal, [], "TR mensal");
+  const tjlpDados = get(tjlpMensal, [], "TJLP mensal");
+  const igpmDados = get(igpmMensal, [], "IGP-M mensal");
+  const cdiDados = get(cdiMensal, [], "CDI mensal");
 
   // Calcular SELIC anualizada a partir da taxa diária
   let selicAnualizada: number | null = null;
@@ -258,6 +291,22 @@ export async function buscarDadosBCB(): Promise<DadosBCBCompleto> {
       usdCompra: ptax?.cotacaoCompra ?? null,
       usdVenda: ptax?.cotacaoVenda ?? null,
       dataHora: ptax?.dataHoraCotacao ?? null,
+    },
+    tr: {
+      mensal: trDados,
+      atual: trDados.length > 0 ? trDados[trDados.length - 1] : null,
+    },
+    tjlp: {
+      mensal: tjlpDados,
+      atual: tjlpDados.length > 0 ? tjlpDados[tjlpDados.length - 1] : null,
+    },
+    igpm: {
+      mensal: igpmDados,
+      atual: igpmDados.length > 0 ? igpmDados[igpmDados.length - 1] : null,
+    },
+    cdi: {
+      mensal: cdiDados,
+      atual: cdiDados.length > 0 ? cdiDados[cdiDados.length - 1] : null,
     },
     resolucoesCMN: RESOLUCOES_CMN,
     dataConsulta: new Date().toISOString(),

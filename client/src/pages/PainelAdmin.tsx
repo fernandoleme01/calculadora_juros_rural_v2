@@ -262,7 +262,7 @@ export default function PainelAdmin() {
             <Shield className="h-6 w-6 text-primary" />
             Painel Administrativo
           </h1>
-          <p className="text-slate-500 text-sm mt-1">JurosRurais.pro — Gestão de clientes e assinaturas</p>
+          <p className="text-slate-500 text-sm mt-1">Juros Rurais Pro — Gestão de clientes e assinaturas</p>
         </div>
         <button
           onClick={() => { refetchStats(); refetchUsuarios(); }}

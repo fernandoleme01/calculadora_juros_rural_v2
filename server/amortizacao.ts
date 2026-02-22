@@ -11,10 +11,13 @@
  * Fundamentação Legal:
  * - Lei nº 4.829/65 (SNCR - Sistema Nacional de Crédito Rural)
  * - Decreto-Lei nº 167/67 (Cédula de Crédito Rural)
- * - Decreto nº 22.626/33 (Lei de Usura) - limite 12% a.a.
- * - Manual de Crédito Rural (MCR) do Banco Central
+ * - Decreto nº 22.626/33 (Lei de Usura) - limite 12% a.a. (revisão judicial)
+ * - MCR 7-1, Tabela 1 (Res. CMN 5.234): limites por modalidade
+ * - MCR 2-6: regras de reembolso e amortização
  * - STJ: REsp 1.061.530/RS (repetitivo) - capitalização de juros
+ * - Atualização MCR nº 752, de 19/01/2026
  */
+import { getTaxaLimite, type ModalidadeCredito } from "./limitesLegais";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -29,6 +32,7 @@ export interface DadosAmortizacao {
   sistema: SistemaAmortizacao;      // Price, SAC ou SAF
   periodicidade: PeriodicidadeParcela; // anual ou mensal
   valoresPagos?: number[];          // Valores efetivamente pagos em cada parcela (opcional)
+  modalidade?: ModalidadeCredito;   // Modalidade do crédito para limite legal correto (MCR 7-1)
 }
 
 export interface LinhaAmortizacao {
@@ -64,8 +68,11 @@ export interface ResultadoAmortizacao {
   totalJuros: number;               // Total de juros pagos
   totalAmortizado: number;          // Total amortizado do principal
   saldoDevedorAtual: number;        // Saldo devedor após parcelas pagas
-  // Comparativo com taxa legal (12% a.a.)
-  saldoDevedorLegal: number;        // Saldo devedor se taxa fosse 12% a.a.
+  // Comparativo com taxa legal (MCR 7-1 por modalidade)
+  taxaLegalAplicada: number;        // Taxa legal usada na comparação (varia por modalidade)
+  modalidade?: ModalidadeCredito;   // Modalidade do crédito
+  mcrFundamentacao?: string;        // Citação exata do MCR (ex: "MCR 7-1, Tabela 1, item 1")
+  saldoDevedorLegal: number;        // Saldo devedor se taxa fosse o limite legal
   excessoTotal: number;             // Total cobrado a mais vs. taxa legal
   totalJurosLegal: number;          // Total de juros que deveria ter pago
   // Planilha completa
@@ -92,7 +99,8 @@ export interface JurisprudenciaAmort {
 
 // ─── Constante Legal ─────────────────────────────────────────────────────────
 
-const TAXA_LEGAL_MAXIMA_AA = 12.0; // 12% ao ano - Decreto nº 22.626/33 + STJ
+/** Taxa padrão de revisão judicial (Lei de Usura + STJ REsp 1.061.530/RS) */
+const TAXA_LEGAL_MAXIMA_AA = 12.0; // 12% ao ano — usado quando modalidade não especificada
 
 // ─── Funções de Taxa ─────────────────────────────────────────────────────────
 
@@ -302,9 +310,19 @@ export function calcularAmortizacao(dados: DadosAmortizacao): ResultadoAmortizac
     valoresPagos,
   } = dados;
 
+  // Determina a taxa legal correta pela modalidade (MCR 7-1, Tabela 1)
+  const modalidade = dados.modalidade;
+  let taxaLegalAplicada = TAXA_LEGAL_MAXIMA_AA;
+  let mcrFundamentacao: string | undefined;
+  if (modalidade) {
+    const { taxa, limite } = getTaxaLimite(modalidade);
+    taxaLegalAplicada = taxa;
+    mcrFundamentacao = `${limite.fundamentacao.mcrSecao} (${limite.fundamentacao.resolucao}, ${limite.fundamentacao.atualizacaoMCR})`;
+  }
+
   // Converte taxa anual para taxa periódica
   const taxaPeriodica = taxaAnualParaPeriodica(taxaJurosAnual, periodicidade);
-  const taxaLegalPeriodica = taxaAnualParaPeriodica(TAXA_LEGAL_MAXIMA_AA, periodicidade);
+  const taxaLegalPeriodica = taxaAnualParaPeriodica(taxaLegalAplicada, periodicidade);
 
   // Gera planilha conforme sistema escolhido
   let planilhaCompleta: LinhaAmortizacao[];
@@ -345,25 +363,29 @@ export function calcularAmortizacao(dados: DadosAmortizacao): ResultadoAmortizac
   const fmtP = (n: number) => `${(n * 100).toFixed(4)}%`;
   const periodoLabel = periodicidade === "anual" ? "ao ano" : "ao mês";
 
+  const mcrRef = mcrFundamentacao
+    ? `Taxa legal máxima por modalidade (${mcrFundamentacao}): ${taxaLegalAplicada.toFixed(1)}% a.a.`
+    : `Taxa legal máxima (Decreto nº 22.626/33 + STJ REsp 1.061.530/RS): ${taxaLegalAplicada}% a.a.`;
+
   const memoriaCalculo: string[] = [
     `Sistema de amortização: ${sistema.toUpperCase()} — ${getSistemaDescricao(sistema)}`,
     `Periodicidade das parcelas: ${periodicidade === "anual" ? "Anual (safra a safra)" : "Mensal"}`,
     `Valor financiado: ${fmtR(valorPrincipal)}`,
     `Taxa de juros contratada: ${taxaJurosAnual.toFixed(4)}% a.a. → ${fmtP(taxaPeriodica)} ${periodoLabel}`,
-    `Taxa legal máxima (Decreto nº 22.626/33 + STJ): ${TAXA_LEGAL_MAXIMA_AA}% a.a. → ${fmtP(taxaLegalPeriodica)} ${periodoLabel}`,
+    mcrRef + ` → ${fmtP(taxaLegalPeriodica)} ${periodoLabel}`,
     `Número total de parcelas: ${numeroParcelas}`,
     `Parcelas pagas: ${parcelasPagas} de ${numeroParcelas}`,
     ``,
     `─── Resultado das Parcelas Pagas ───`,
     `Total pago (pelo contrato): ${fmtR(totalPago)}`,
     `Total de juros pagos (contrato): ${fmtR(totalJuros)}`,
-    `Total de juros que deveria pagar (taxa legal 12% a.a.): ${fmtR(totalJurosLegal)}`,
+    `Total de juros que deveria pagar (taxa legal ${taxaLegalAplicada.toFixed(1)}% a.a.): ${fmtR(totalJurosLegal)}`,
     `Excesso de juros cobrado: ${fmtR(excessoTotal)} ${excessoTotal > 0 ? "⚠️ COBRANÇA ABUSIVA" : "✓ dentro do limite legal"}`,
     `Total amortizado do principal: ${fmtR(totalAmortizado)}`,
     ``,
     `─── Saldo Devedor Atual ───`,
     `Saldo devedor pelo contrato: ${fmtR(saldoDevedorAtual)}`,
-    `Saldo devedor pela taxa legal (12% a.a.): ${fmtR(saldoDevedorLegal)}`,
+    `Saldo devedor pela taxa legal (${taxaLegalAplicada.toFixed(1)}% a.a.): ${fmtR(saldoDevedorLegal)}`,
     `Diferença (excesso no saldo): ${fmtR(saldoDevedorAtual - saldoDevedorLegal)}`,
   ];
 
@@ -378,6 +400,9 @@ export function calcularAmortizacao(dados: DadosAmortizacao): ResultadoAmortizac
     sistema,
     periodicidade,
     taxaPeriodica,
+    taxaLegalAplicada,
+    modalidade,
+    mcrFundamentacao,
     prestacaoInicial,
     totalPago,
     totalJuros,
