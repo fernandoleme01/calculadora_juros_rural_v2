@@ -1,0 +1,1 @@
+ALTER TABLE `users` MODIFY COLUMN `plano` enum('standard','premium','supreme','admin') NOT NULL DEFAULT 'standard';

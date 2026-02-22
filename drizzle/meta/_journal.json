@@ -15,6 +15,20 @@
       "when": 1771773492900,
       "tag": "0001_lean_clea",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1771780677525,
+      "tag": "0002_small_brood",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1771781080969,
+      "tag": "0003_nifty_darwin",
+      "breakpoints": true
     }
   ]
 }

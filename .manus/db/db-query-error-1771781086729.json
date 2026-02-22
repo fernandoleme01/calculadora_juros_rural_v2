@@ -1,0 +1,8 @@
+{
+  "query": "UPDATE users SET plano = 'standard' WHERE plano IN ('free', 'pro');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 29pA2ogac4Q4wNx.16908730d1e7 --database AwUVUek8dZCA2h8s3bwVHV --execute UPDATE users SET plano = 'standard' WHERE plano IN ('free', 'pro');",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1265 (01000) at line 1: Data truncated for column '%s' at row %d"
+  ]
+}

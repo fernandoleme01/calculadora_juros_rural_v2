@@ -21,21 +21,24 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Calculator, History, BookOpen, Scale, FileSearch, Landmark, Gavel } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Calculator, History, BookOpen, Scale, FileSearch, Landmark, Gavel, Shield } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Painel Principal", path: "/" },
-  { icon: Calculator, label: "Calculadora TCR", path: "/calculadora" },
-  { icon: FileSearch, label: "Analisar Contrato PDF", path: "/analisar-contrato" },
-  { icon: Gavel, label: "Gerar Petição / Laudo", path: "/gerador-peticao" },
-  { icon: Landmark, label: "Dados do BCB", path: "/dados-bcb" },
-  { icon: History, label: "Histórico", path: "/historico" },
-  { icon: BookOpen, label: "Fundamentação Legal", path: "/fundamentacao" },
+  { icon: LayoutDashboard, label: "Painel Principal", path: "/app" },
+  { icon: Calculator, label: "Calculadora TCR", path: "/app/calculadora" },
+  { icon: FileSearch, label: "Analisar Contrato PDF", path: "/app/analisar-contrato" },
+  { icon: Gavel, label: "Gerar Petição / Laudo", path: "/app/gerador-peticao" },
+  { icon: Landmark, label: "Dados do BCB", path: "/app/dados-bcb" },
+  { icon: History, label: "Histórico", path: "/app/historico" },
+  { icon: BookOpen, label: "Fundamentação Legal", path: "/app/fundamentacao" },
 ];
+
+// Item de menu exclusivo para administradores
+const adminMenuItem = { icon: Shield, label: "Painel Admin", path: "/app/admin" };
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
@@ -80,7 +83,7 @@ export default function DashboardLayout({
             size="lg"
             className="w-full shadow-lg hover:shadow-xl transition-all"
           >
-            Sign in
+            Entrar / Cadastrar
           </Button>
         </div>
       </div>
@@ -204,6 +207,25 @@ function DashboardLayoutContent({
                   </SidebarMenuItem>
                 );
               })}
+              {/* Item de admin — visível apenas para administradores */}
+              {user?.role === 'admin' && (() => {
+                const isActive = location === adminMenuItem.path;
+                return (
+                  <SidebarMenuItem key={adminMenuItem.path}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      onClick={() => setLocation(adminMenuItem.path)}
+                      tooltip={adminMenuItem.label}
+                      className="h-10 transition-all font-normal border-t border-sidebar-border mt-1 pt-1"
+                    >
+                      <adminMenuItem.icon
+                        className={`h-4 w-4 ${isActive ? "text-primary" : "text-red-500"}`}
+                      />
+                      <span className="text-red-600 font-medium">{adminMenuItem.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })()}
             </SidebarMenu>
           </SidebarContent>
 

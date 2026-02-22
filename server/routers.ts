@@ -2,6 +2,7 @@ import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
+import { TRPCError } from "@trpc/server";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import {
   salvarCalculo,
@@ -9,6 +10,13 @@ import {
   listarCalculosPorUsuario,
   buscarCalculoPorId,
   deletarCalculo,
+  getPlanoUsuario,
+  incrementarLaudos,
+  LIMITES_LAUDO,
+  listarTodosUsuarios,
+  alterarPlanoUsuario,
+  resetarLaudosUsuario,
+  getEstatisticasAdmin,
 } from "./db";
 import {
   calcularTCRPos,
@@ -233,7 +241,7 @@ Fundamente o parecer na Lei nº 4.829/65, Decreto-Lei nº 167/67, Decreto nº 22
   // ─── Laudo Técnico-Jurídico ───────────────────────────────────────────────
   laudo: router({
 
-    gerar: publicProcedure
+    gerar: protectedProcedure
       .input(z.object({
         nomeAutor: z.string(),
         nacionalidade: z.string().default("brasileiro(a)"),
@@ -276,7 +284,16 @@ Fundamente o parecer na Lei nº 4.829/65, Decreto-Lei nº 167/67, Decreto nº 22
         selicAtual: z.number().optional(),
         usdAtual: z.number().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        // ─── Verificar limite de laudos do plano ───
+        const planoInfo = await getPlanoUsuario(ctx.user.id);
+        if (!planoInfo.podeGerar) {
+          throw new Error(
+            `Limite de laudos atingido para o plano ${planoInfo.plano}. ` +
+            `Você utilizou ${planoInfo.laudosUsados} de ${planoInfo.limite} laudo(s). ` +
+            `Faça upgrade para continuar.`
+          );
+        }
         // Buscar dados atualizados do BCB para enriquecer o laudo
         let dadosBCB;
         try {
@@ -290,7 +307,15 @@ Fundamente o parecer na Lei nº 4.829/65, Decreto-Lei nº 167/67, Decreto nº 22
         } catch {
           dadosBCB = undefined;
         }
-        return await gerarLaudoTecnicoJuridico(input as DadosContrato, dadosBCB);
+        const resultado = await gerarLaudoTecnicoJuridico(input as DadosContrato, dadosBCB);
+        // Incrementar contador de laudos após geração bem-sucedida
+        await incrementarLaudos(ctx.user.id);
+        return {
+          ...resultado,
+          podePDF: planoInfo.podePDF,
+          podeImprimir: planoInfo.podeImprimir,
+          plano: planoInfo.plano,
+        };
       }),
   }),
 
@@ -341,6 +366,66 @@ Fundamente o parecer na Lei nº 4.829/65, Decreto-Lei nº 167/67, Decreto nº 22
       }),
   }),
 
+  // ─── Plano do Usuário ──────────────────────────────────────────────────────
+  plano: router({
+
+    // Retorna plano, laudos usados e permissões do usuário autenticado
+    meuPlano: protectedProcedure.query(async ({ ctx }) => {
+      return await getPlanoUsuario(ctx.user.id);
+    }),
+
+    // Retorna limites de cada plano (público, para exibir na landing page)
+    limites: publicProcedure.query(() => LIMITES_LAUDO),
+  }),
+
+  // ─── Administração (apenas role=admin) ──────────────────────────────────────
+  admin: router({
+
+    // Verificar se o usuário é admin
+    verificar: protectedProcedure.query(({ ctx }) => {
+      if (ctx.user.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN', message: 'Acesso restrito a administradores.' });
+      return { isAdmin: true };
+    }),
+
+    // Estatísticas gerais do sistema
+    estatisticas: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+      return await getEstatisticasAdmin();
+    }),
+
+    // Listar todos os usuários
+    listarUsuarios: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+      return await listarTodosUsuarios();
+    }),
+
+    // Alterar plano de um usuário
+    alterarPlano: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+        plano: z.enum(['standard', 'premium', 'supreme', 'admin']),
+        expiracao: z.string().datetime().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        await alterarPlanoUsuario(
+          input.userId,
+          input.plano,
+          input.expiracao ? new Date(input.expiracao) : null
+        );
+        return { success: true };
+      }),
+
+    // Resetar contador de laudos de um usuário
+    resetarLaudos: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        await resetarLaudosUsuario(input.userId);
+        return { success: true };
+      }),
+  }),
+
   // ─── Histórico ────────────────────────────────────────────────────────────
   historico: router({
 
@@ -367,3 +452,4 @@ Fundamente o parecer na Lei nº 4.829/65, Decreto-Lei nº 167/67, Decreto nº 22
 });
 
 export type AppRouter = typeof appRouter;
+

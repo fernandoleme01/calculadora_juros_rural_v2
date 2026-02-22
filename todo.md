@@ -56,13 +56,13 @@
 - [x] Testes vitest para extração e análise
 
 ## Laudo Completo e Integração BCB
-- [ ] Integração com API do Banco Central (IPCA, TCR, Resoluções CMN)
-- [ ] Gerador de laudo técnico-jurídico com memória de cálculo completa
-- [ ] Jurisprudência real com números de processos (STJ, STF, TRF)
-- [ ] Página de Dados do BCB com atualizações automáticas
-- [ ] Laudo integrado ao fluxo de análise de contrato PDF
-- [ ] Laudo integrado ao resultado da calculadora TCR
-- [ ] Exportação do laudo em PDF
+- [x] Integração com API do Banco Central (IPCA, TCR, Resoluções CMN)
+- [x] Gerador de laudo técnico-jurídico com memória de cálculo completa
+- [x] Jurisprudência real com números de processos (STJ, STF, TRF)
+- [x] Página de Dados do BCB com atualizações automáticas
+- [x] Laudo integrado ao fluxo de análise de contrato PDF
+- [x] Laudo integrado ao resultado da calculadora TCR
+- [x] Exportação do laudo em PDF
 
 ## Gerador de Petição de Revisão Contratual
 - [x] Backend: módulo gerador de laudo técnico-jurídico completo com jurisprudência real
@@ -75,3 +75,55 @@
 - [x] Frontend: página "Dados do BCB" com indicadores atualizados em tempo real
 - [x] Frontend: integração do laudo ao resultado da calculadora TCR
 - [x] Frontend: integração do laudo à análise de contrato PDF
+
+## Integração SICOR/MDCR — Matriz de Dados do Crédito Rural
+- [ ] Mapear endpoints SICOR disponíveis (programas, subprogramas, taxas, fontes de recursos)
+- [ ] Backend: módulo sicor.ts com cache inteligente e fallback para dados offline
+- [ ] Backend: endpoint tRPC para programas de crédito rural (PRONAF, PRONAMP, etc.)
+- [ ] Backend: endpoint tRPC para taxas vigentes por programa/subprograma
+- [ ] Backend: endpoint tRPC para fontes de recursos (MCR, FAT, Poupança Rural, etc.)
+- [ ] Backend: endpoint tRPC para parâmetros Jm e FII por programa
+- [ ] Frontend: seletor de programa/subprograma na calculadora TCR com preenchimento automático
+- [ ] Frontend: página "Parâmetros MDCR" com tabela completa de taxas por programa
+- [ ] Frontend: indicador de origem dos dados (BCB ao vivo vs. fallback offline)
+- [ ] Testes vitest para o módulo SICOR
+
+## Landing Page e Sistema SaaS
+- [ ] Schema: adicionar campo `plano` (free/pro/admin) na tabela users
+- [ ] Schema: adicionar campo `planoExpiracao` e `stripeCustomerId` na tabela users
+- [ ] Migração do banco de dados com pnpm db:push
+- [ ] Backend: rota tRPC para buscar plano do usuário atual
+- [ ] Backend: rota tRPC para admin gerenciar planos
+- [ ] Landing page: seção hero com headline e CTA de login
+- [ ] Landing page: seção de funcionalidades (cards com ícones)
+- [ ] Landing page: seção de planos (Free vs Pro) com tabela comparativa
+- [ ] Landing page: seção de fundamentação legal (credibilidade)
+- [ ] Landing page: rodapé com links e aviso legal
+- [ ] Dashboard: banner de upgrade para usuários free
+- [ ] Dashboard: bloqueio de funcionalidades premium (laudo IA, petição, OCR) para free
+- [ ] App.tsx: rota pública `/` para landing page (sem DashboardLayout)
+- [ ] App.tsx: rota `/app` para o dashboard (com DashboardLayout)
+- [ ] Testes vitest para controle de acesso por plano
+
+## Atualização de Planos e Preços
+- [x] Landing page: 3 planos (Standard R$149/10 laudos, Premium R$329/25 laudos, Supreme R$1990/ilimitado)
+- [x] Schema: atualizar enum de plano para standard/premium/supreme
+- [x] Backend: controle de limite de laudos por plano
+- [x] Landing page: toggle mensal/anual com desconto de 25% na seção de planos
+
+## Controle de Acesso por Plano
+- [x] Backend: rota tRPC para verificar plano e laudos usados do usuário
+- [x] Backend: incrementar contador de laudos ao gerar laudo
+- [x] Backend: bloquear geração de laudo após 1 uso no plano Free
+- [x] Frontend: bloquear botão de exportar PDF para usuários Free
+- [x] Frontend: bloquear impressão via CSS @media print para usuários Free
+- [x] Frontend: exibir banner de upgrade quando Free atingir o limite
+- [x] Landing page: adicionar plano Free (1 laudo, sem PDF/impressão) na seção de planos
+
+## Painel Administrativo
+- [x] Backend: rotas admin (listar usuários, alterar plano, estatísticas)
+- [x] Backend: adminProcedure com verificação de role=admin
+- [x] Frontend: página /app/admin com tabs (Clientes, Assinaturas, Financeiro, Laudos)
+- [x] Frontend: bloqueio PDF/impressão para plano Free
+- [x] Frontend: banner de upgrade para usuários Free
+- [x] Landing page: adicionar plano Free (1 laudo, sem PDF)
