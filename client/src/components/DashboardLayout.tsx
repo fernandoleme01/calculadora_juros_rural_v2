@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Calculator, History, BookOpen, Scale, FileSearch, Landmark, Gavel, Shield, CreditCard } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Calculator, History, BookOpen, Scale, FileSearch, Landmark, Gavel, Shield, CreditCard, UserCog, BarChart3, Link2 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -30,11 +30,14 @@ import { Button } from "./ui/button";
 const menuItems = [
   { icon: LayoutDashboard, label: "Painel Principal", path: "/app" },
   { icon: Calculator, label: "Calculadora TCR", path: "/app/calculadora" },
+  { icon: BarChart3, label: "Amortização", path: "/app/amortizacao" },
+  { icon: Link2, label: "Cadeia de Contratos", path: "/app/cadeia-contratos" },
   { icon: FileSearch, label: "Analisar Contrato PDF", path: "/app/analisar-contrato" },
   { icon: Gavel, label: "Gerar Petição / Laudo", path: "/app/gerador-peticao" },
   { icon: Landmark, label: "Dados do BCB", path: "/app/dados-bcb" },
   { icon: History, label: "Histórico", path: "/app/historico" },
   { icon: BookOpen, label: "Fundamentação Legal", path: "/app/fundamentacao" },
+  { icon: UserCog, label: "Perfil Profissional", path: "/app/perfil" },
   { icon: CreditCard, label: "Minha Assinatura", path: "/app/assinatura" },
 ];
 

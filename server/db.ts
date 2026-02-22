@@ -1,6 +1,6 @@
 import { eq, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, calculosTcr, InsertCalculoTcr } from "../drizzle/schema";
+import { InsertUser, users, calculosTcr, InsertCalculoTcr, perfilAdvogado, perfilPerito, InsertPerfilAdvogado, InsertPerfilPerito, PerfilAdvogado, PerfilPerito, cadeiaContratos, contratosCadeia, InsertCadeiaContratos, InsertContratoCadeia, CadeiaContratos, ContratoCadeia } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -296,4 +296,115 @@ export async function salvarStripeCustomerId(userId: number, stripeCustomerId: s
   await db.update(users)
     .set({ stripeCustomerId })
     .where(eq(users.id, userId));
+}
+
+// ─── Perfil do Advogado ───────────────────────────────────────────────────────
+
+export async function salvarPerfilAdvogado(userId: number, dados: Omit<InsertPerfilAdvogado, "userId">): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Banco de dados indisponível");
+  await db
+    .insert(perfilAdvogado)
+    .values({ userId, ...dados })
+    .onDuplicateKeyUpdate({ set: { ...dados, updatedAt: new Date() } });
+}
+
+export async function buscarPerfilAdvogado(userId: number): Promise<PerfilAdvogado | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(perfilAdvogado).where(eq(perfilAdvogado.userId, userId)).limit(1);
+  return result[0] ?? null;
+}
+
+// ─── Perfil do Perito Técnico ─────────────────────────────────────────────────
+
+export async function salvarPerfilPerito(userId: number, dados: Omit<InsertPerfilPerito, "userId">): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Banco de dados indisponível");
+  await db
+    .insert(perfilPerito)
+    .values({ userId, ...dados })
+    .onDuplicateKeyUpdate({ set: { ...dados, updatedAt: new Date() } });
+}
+
+export async function buscarPerfilPerito(userId: number): Promise<PerfilPerito | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(perfilPerito).where(eq(perfilPerito.userId, userId)).limit(1);
+  return result[0] ?? null;
+}
+
+// ─── Cadeia de Contratos — Operação Mata-Mata ─────────────────────────────────
+
+export async function criarCadeiaContratos(
+  userId: number,
+  dados: { nome: string; banco: string; descricao?: string }
+): Promise<{ id: number }> {
+  const db = await getDb();
+  if (!db) throw new Error("Banco de dados indisponível");
+  const result = await db.insert(cadeiaContratos).values({ userId, ...dados });
+  return { id: Number((result as any).insertId) };
+}
+
+export async function listarCadeiasPorUsuario(userId: number): Promise<CadeiaContratos[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(cadeiaContratos)
+    .where(eq(cadeiaContratos.userId, userId))
+    .orderBy(desc(cadeiaContratos.createdAt));
+}
+
+export async function buscarCadeiaComContratos(id: number): Promise<(CadeiaContratos & { contratos: ContratoCadeia[] }) | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const [cadeia] = await db.select().from(cadeiaContratos).where(eq(cadeiaContratos.id, id)).limit(1);
+  if (!cadeia) return null;
+  const contratos = await db
+    .select()
+    .from(contratosCadeia)
+    .where(eq(contratosCadeia.cadeiaId, id))
+    .orderBy(contratosCadeia.ordem);
+  return { ...cadeia, contratos };
+}
+
+export async function deletarCadeia(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Banco de dados indisponível");
+  await db.delete(contratosCadeia).where(eq(contratosCadeia.cadeiaId, id));
+  await db.delete(cadeiaContratos).where(eq(cadeiaContratos.id, id));
+}
+
+export async function adicionarContratoCadeia(
+  dados: Omit<InsertContratoCadeia, "createdAt" | "alertasDetectados">
+): Promise<{ id: number }> {
+  const db = await getDb();
+  if (!db) throw new Error("Banco de dados indisponível");
+  const result = await db.insert(contratosCadeia).values(dados as InsertContratoCadeia);
+  return { id: Number((result as any).insertId) };
+}
+
+export async function atualizarContratoCadeia(
+  id: number,
+  dados: Partial<Omit<InsertContratoCadeia, "createdAt" | "alertasDetectados">>
+): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Banco de dados indisponível");
+  await db.update(contratosCadeia).set(dados as any).where(eq(contratosCadeia.id, id));
+}
+
+export async function deletarContratoCadeia(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Banco de dados indisponível");
+  await db.delete(contratosCadeia).where(eq(contratosCadeia.id, id));
+}
+
+export async function salvarLaudoCadeia(id: number, laudo: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Banco de dados indisponível");
+  await db
+    .update(cadeiaContratos)
+    .set({ laudoGerado: laudo, laudoGeradoEm: new Date(), updatedAt: new Date() })
+    .where(eq(cadeiaContratos.id, id));
 }

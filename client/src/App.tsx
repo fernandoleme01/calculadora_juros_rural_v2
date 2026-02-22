@@ -15,6 +15,9 @@ import DadosBCB from "./pages/DadosBCB";
 import GeradorPeticao from "./pages/GeradorPeticao";
 import PainelAdmin from "./pages/PainelAdmin";
 import Assinatura from "./pages/Assinatura";
+import PerfilProfissional from "./pages/PerfilProfissional";
+import Amortizacao from "./pages/Amortizacao";
+import CadeiaContratos from "./pages/CadeiaContratos";
 import DashboardLayout from "./components/DashboardLayout";
 
 // Rotas públicas (sem autenticação, sem DashboardLayout)
@@ -42,6 +45,9 @@ function DashboardRoutes() {
         <Route path="/app/admin" component={PainelAdmin} />
         <Route path="/app/assinatura" component={Assinatura} />
         <Route path="/app/assinatura/sucesso" component={Assinatura} />
+        <Route path="/app/perfil" component={PerfilProfissional} />
+        <Route path="/app/amortizacao" component={Amortizacao} />
+        <Route path="/app/cadeia-contratos" component={CadeiaContratos} />
         <Route component={NotFound} />
       </Switch>
     </DashboardLayout>

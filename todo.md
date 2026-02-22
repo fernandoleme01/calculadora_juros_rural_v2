@@ -147,3 +147,62 @@
 ## Tradução da Interface
 - [x] DashboardLayout: traduzir tela de login para português
 - [x] DashboardLayout: traduzir botão "Sign out" para "Sair"
+
+## Amortização com Periodicidade Configurável (Crédito Rural)
+- [x] Backend: módulo amortizacao.ts com Price, SAC e SAF
+- [x] Backend: periodicidade configurável (anual ou mensal) em todos os sistemas
+- [x] Backend: cálculo de saldo devedor revisado após N parcelas pagas
+- [x] Backend: tabela completa de amortização (planilha) com cada parcela
+- [x] Backend: recálculo com taxa legal máxima (12% a.a.) para comparação
+- [x] Backend: rota tRPC calcularAmortizacao
+- [x] Frontend: seletor de periodicidade (anual / mensal) no formulário
+- [x] Frontend: seletor de sistema de amortização (Price / SAC / SAF)
+- [x] Frontend: campo de número total de parcelas e parcelas pagas
+- [x] Frontend: tabela de parcelas pagas com valor informado pelo usuário
+- [x] Frontend: exibição da planilha de amortização no resultado
+- [x] Frontend: comparativo saldo contrato vs. saldo taxa legal
+- [x] Frontend: valor do excesso cobrado por parcela
+
+## Perfil Profissional — Advogado e Perito Técnico
+- [x] Schema: tabela perfilAdvogado (userId, nome, OAB, CPF, email, telefone, escritório, endereço, cidade, estado, CEP)
+- [x] Schema: tabela perfilPerito (userId, nome, categoria (contador/economista/administrador/tecnico_contabil), registro (CRC/CRA/CFC), CPF, email, telefone, empresa, endereço, cidade, estado, CEP)
+- [x] Backend: rotas tRPC salvarPerfilAdvogado, buscarPerfilAdvogado
+- [x] Backend: rotas tRPC salvarPerfilPerito, buscarPerfilPerito
+- [x] Frontend: página /app/perfil com duas abas (Advogado e Perito Técnico)
+- [x] Frontend: item de menu "Perfil Profissional" no DashboardLayout
+- [x] Frontend: rota no App.tsx
+- [x] Integração: petição de revisão contratual usa dados do perfilAdvogado na qualificação e assinatura
+- [x] Integração: laudo técnico-jurídico usa dados do perfilPerito na assinatura e rodapé
+- [x] Integração: GeradorPeticao.tsx pré-preenche campos do advogado com dados do perfil
+- [x] Integração: laudo gerado inclui bloco de assinatura com nome, categoria e registro do perito
+
+## Revisão das Fórmulas de Amortização e Campo de Parcela Paga
+- [ ] Revisar fórmula Price: verificar conversão taxa anual → periódica (capitalização composta vs. simples)
+- [ ] Revisar fórmula SAC: verificar cálculo de juros sobre saldo devedor por período
+- [ ] Revisar fórmula SAF: verificar lógica de amortização francês adaptado
+- [ ] Implementar campo "Valor da Parcela Paga" (o que o banco cobrou de fato)
+- [ ] Calcular diferença: valor pago - valor legal = excesso por parcela
+- [ ] Exibir coluna "Valor Pago" e "Diferença" na planilha de amortização
+- [ ] Calcular excesso total acumulado com base nos valores reais pagos
+- [ ] Memória de cálculo: mostrar passo a passo de cada fórmula com valores reais
+- [ ] Testes vitest para as fórmulas corrigidas
+
+## Análise de Cadeia Contratual — Operação Mata-Mata e Aditivos
+- [x] Schema: tabela `cadeia_contratos` (userId, nome, banco, descricao, createdAt)
+- [x] Schema: tabela `contrato_cadeia` (cadeiaId, ordem, tipo: original/aditivo/refinanciamento/novacao, numeroContrato, dataContratacao, valorContrato, valorPrincipalNovo, valorEncargosIncorporados, taxaJuros, numeroParcelas, modalidade, observacoes)
+- [x] Backend: db helpers para CRUD de cadeias e contratos vinculados
+- [x] Backend: função analisarCadeiaContratual() que detecta: rolagem de dívida, capitalização indevida de juros no novo principal, aumento abusivo do principal, violação do art. 39 do CDC e art. 478 do CC
+- [x] Backend: router tRPC para criar, listar, buscar e deletar cadeias
+- [x] Backend: router tRPC para analisar cadeia com IA (LLM) gerando laudo completo
+- [x] Frontend: página /app/cadeia-contratos com lista de cadeias cadastradas
+- [x] Frontend: formulário para criar nova cadeia e adicionar contratos vinculados
+- [x] Frontend: visualização da cadeia em linha do tempo (timeline)
+- [x] Frontend: painel de análise: valor original vs. valor atual, encargos incorporados, excesso acumulado
+- [x] Frontend: detecção automática de "mata-mata" com alerta visual
+- [x] Frontend: geração de laudo técnico-jurídico da cadeia contratual completa
+- [x] Frontend: item de menu "Cadeia de Contratos" no DashboardLayout
+- [x] Testes vitest para a lógica de detecção de rolagem de dívida
+
+## Correção de Navegação
+- [x] Corrigir redirecionamento automático: ao acessar "/" o sistema vai direto para /app sem mostrar a landing page
+- [x] Landing page deve ser exibida sempre, com botão "Entrar" que redireciona para /app (ou login se não autenticado)

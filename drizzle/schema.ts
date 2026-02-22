@@ -82,3 +82,116 @@ export const calculosTcr = mysqlTable("calculos_tcr", {
 
 export type CalculoTcr = typeof calculosTcr.$inferSelect;
 export type InsertCalculoTcr = typeof calculosTcr.$inferInsert;
+
+// ─── Perfil do Advogado ───────────────────────────────────────────────────────
+export const perfilAdvogado = mysqlTable("perfil_advogado", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  nome: varchar("nome", { length: 255 }).notNull(),
+  oab: varchar("oab", { length: 30 }).notNull(),          // Ex: OAB/SP 123.456
+  cpf: varchar("cpf", { length: 14 }),                    // Ex: 000.000.000-00
+  email: varchar("email", { length: 320 }),
+  telefone: varchar("telefone", { length: 20 }),
+  escritorio: varchar("escritorio", { length: 255 }),
+  endereco: varchar("endereco", { length: 255 }),
+  cidade: varchar("cidade", { length: 100 }),
+  estado: varchar("estado", { length: 2 }),
+  cep: varchar("cep", { length: 9 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PerfilAdvogado = typeof perfilAdvogado.$inferSelect;
+export type InsertPerfilAdvogado = typeof perfilAdvogado.$inferInsert;
+
+// ─── Perfil do Perito Técnico ─────────────────────────────────────────────────
+export const perfilPerito = mysqlTable("perfil_perito", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  nome: varchar("nome", { length: 255 }).notNull(),
+  // Categoria profissional
+  categoria: mysqlEnum("categoria", [
+    "contador",
+    "economista",
+    "administrador",
+    "tecnico_contabil",
+    "outro",
+  ]).notNull(),
+  // Registro profissional (CRC para contador/técnico, CRA para administrador, CORECON para economista)
+  registroProfissional: varchar("registroProfissional", { length: 50 }).notNull(), // Ex: CRC/SP 123456
+  cpf: varchar("cpf", { length: 14 }),
+  email: varchar("email", { length: 320 }),
+  telefone: varchar("telefone", { length: 20 }),
+  empresa: varchar("empresa", { length: 255 }),
+  endereco: varchar("endereco", { length: 255 }),
+  cidade: varchar("cidade", { length: 100 }),
+  estado: varchar("estado", { length: 2 }),
+  cep: varchar("cep", { length: 9 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PerfilPerito = typeof perfilPerito.$inferSelect;
+export type InsertPerfilPerito = typeof perfilPerito.$inferInsert;
+
+// ─── Cadeia de Contratos — Análise de Operação Mata-Mata e Aditivos ───────────
+
+/**
+ * Agrupa uma cadeia de contratos vinculados (contrato original + aditivos/refinanciamentos)
+ * Permite detectar rolagem de dívida, capitalização indevida e operações "mata-mata"
+ */
+export const cadeiaContratos = mysqlTable("cadeia_contratos", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  nome: varchar("nome", { length: 255 }).notNull(),           // Ex: "Financiamento Safra 2020/2021 - Banco X"
+  banco: varchar("banco", { length: 255 }).notNull(),
+  descricao: text("descricao"),
+  // Resultado da análise (salvo após geração do laudo)
+  laudoGerado: text("laudoGerado"),
+  laudoGeradoEm: timestamp("laudoGeradoEm"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CadeiaContratos = typeof cadeiaContratos.$inferSelect;
+export type InsertCadeiaContratos = typeof cadeiaContratos.$inferInsert;
+
+/**
+ * Cada contrato individual dentro de uma cadeia
+ * Pode ser: contrato original, aditivo, refinanciamento, novação ou renegociação
+ */
+export const contratosCadeia = mysqlTable("contratos_cadeia", {
+  id: int("id").autoincrement().primaryKey(),
+  cadeiaId: int("cadeiaId").notNull(),
+  ordem: int("ordem").notNull(),                              // 1 = original, 2 = primeiro aditivo, etc.
+  tipo: mysqlEnum("tipo", [
+    "original",         // Contrato original
+    "aditivo",          // Aditivo ao contrato original (mesmo número, nova cláusula)
+    "refinanciamento",  // Novo contrato para quitar o anterior (mata-mata)
+    "novacao",          // Novação: extinção do anterior e criação de novo
+    "renegociacao",     // Renegociação de prazo/encargos
+  ]).notNull(),
+  // Dados do contrato
+  numeroContrato: varchar("numeroContrato", { length: 100 }).notNull(),
+  dataContratacao: varchar("dataContratacao", { length: 20 }).notNull(),
+  dataVencimento: varchar("dataVencimento", { length: 20 }).notNull(),
+  modalidade: mysqlEnum("modalidade", ["custeio", "investimento", "comercializacao", "outro"]).notNull(),
+  // Valores
+  valorContrato: decimal("valorContrato", { precision: 18, scale: 2 }).notNull(),  // Valor nominal do novo contrato
+  valorPrincipalOriginal: decimal("valorPrincipalOriginal", { precision: 18, scale: 2 }),  // Saldo devedor do contrato anterior (se houver)
+  valorEncargosIncorporados: decimal("valorEncargosIncorporados", { precision: 18, scale: 2 }),  // Juros/multas embutidos no novo principal
+  // Taxas
+  taxaJurosAnual: decimal("taxaJurosAnual", { precision: 8, scale: 4 }).notNull(),
+  taxaJurosMora: decimal("taxaJurosMora", { precision: 8, scale: 4 }),
+  numeroParcelas: int("numeroParcelas"),
+  sistemaAmortizacao: mysqlEnum("sistemaAmortizacao", ["price", "sac", "saf", "outro"]),
+  // Garantias e observações
+  garantias: text("garantias"),
+  observacoes: text("observacoes"),
+  // Análise automática
+  alertasDetectados: json("alertasDetectados"),               // Array de strings com alertas
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ContratoCadeia = typeof contratosCadeia.$inferSelect;
+export type InsertContratoCadeia = typeof contratosCadeia.$inferInsert;

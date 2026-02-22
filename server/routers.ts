@@ -17,6 +17,10 @@ import {
   alterarPlanoUsuario,
   resetarLaudosUsuario,
   getEstatisticasAdmin,
+  salvarPerfilAdvogado,
+  buscarPerfilAdvogado,
+  salvarPerfilPerito,
+  buscarPerfilPerito,
 } from "./db";
 import {
   calcularTCRPos,
@@ -38,6 +42,27 @@ import {
   JURISPRUDENCIA_CREDITO_RURAL,
   type DadosContrato,
 } from "./geradorPeticao";
+import {
+  calcularAmortizacao,
+  type SistemaAmortizacao,
+  type PeriodicidadeParcela,
+} from "./amortizacao";
+import {
+  analisarCadeiaContratual,
+  gerarLaudoCadeiaContratual,
+  type ContratoNaCadeia,
+  type TipoContrato,
+} from "./analiseCadeia";
+import {
+  criarCadeiaContratos,
+  listarCadeiasPorUsuario,
+  buscarCadeiaComContratos,
+  deletarCadeia,
+  adicionarContratoCadeia,
+  atualizarContratoCadeia,
+  deletarContratoCadeia,
+  salvarLaudoCadeia,
+} from "./db";
 
 // ─── Schema de Validação ─────────────────────────────────────────────────────
 
@@ -64,10 +89,56 @@ const dadosFinanciamentoSchema = z.object({
   salvar: z.boolean().default(false),
 });
 
+// ─── Router de Perfil Profissional (declarado antes do appRouter) ───────────
+const perfilRouter = router({
+  buscarAdvogado: protectedProcedure.query(async ({ ctx }) => {
+    return await buscarPerfilAdvogado(ctx.user.id);
+  }),
+  salvarAdvogado: protectedProcedure
+    .input(z.object({
+      nome: z.string().min(3, "Nome obrigatório"),
+      oab: z.string().min(3, "OAB obrigatória"),
+      cpf: z.string().optional(),
+      email: z.string().email("E-mail inválido").optional().or(z.literal("")),
+      telefone: z.string().optional(),
+      escritorio: z.string().optional(),
+      endereco: z.string().optional(),
+      cidade: z.string().optional(),
+      estado: z.string().max(2).optional(),
+      cep: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await salvarPerfilAdvogado(ctx.user.id, input);
+      return { success: true };
+    }),
+  buscarPerito: protectedProcedure.query(async ({ ctx }) => {
+    return await buscarPerfilPerito(ctx.user.id);
+  }),
+  salvarPerito: protectedProcedure
+    .input(z.object({
+      nome: z.string().min(3, "Nome obrigatório"),
+      categoria: z.enum(["contador", "economista", "administrador", "tecnico_contabil", "outro"]),
+      registroProfissional: z.string().min(3, "Registro profissional obrigatório"),
+      cpf: z.string().optional(),
+      email: z.string().email("E-mail inválido").optional().or(z.literal("")),
+      telefone: z.string().optional(),
+      empresa: z.string().optional(),
+      endereco: z.string().optional(),
+      cidade: z.string().optional(),
+      estado: z.string().max(2).optional(),
+      cep: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await salvarPerfilPerito(ctx.user.id, input);
+      return { success: true };
+    }),
+});
+
 // ─── Router Principal ────────────────────────────────────────────────────────
 
 export const appRouter = router({
   system: systemRouter,
+  perfil: perfilRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -494,6 +565,230 @@ Fundamente o parecer na Lei nº 4.829/65, Decreto-Lei nº 167/67, Decreto nº 22
   }),
 
   // ─── Histórico ────────────────────────────────────────────────────────────
+  // ─── Amortização ─────────────────────────────────────────────────────────
+  amortizacao: router({
+    calcular: publicProcedure
+      .input(z.object({
+        valorPrincipal: z.number().positive(),
+        taxaJurosAnual: z.number().positive(),
+        numeroParcelas: z.number().int().positive(),
+        parcelasPagas: z.number().int().min(0),
+        sistema: z.enum(["price", "sac", "saf"]),
+        periodicidade: z.enum(["anual", "mensal"]),
+        valoresPagos: z.array(z.number()).optional(),
+      }))
+      .mutation(({ input }) => {
+        return calcularAmortizacao({
+          valorPrincipal: input.valorPrincipal,
+          taxaJurosAnual: input.taxaJurosAnual,
+          numeroParcelas: input.numeroParcelas,
+          parcelasPagas: input.parcelasPagas,
+          sistema: input.sistema as SistemaAmortizacao,
+          periodicidade: input.periodicidade as PeriodicidadeParcela,
+          valoresPagos: input.valoresPagos,
+        });
+      }),
+  }),
+
+  // ─── Cadeia de Contratos — Análise de Operação Mata-Mata ────────────────────
+  cadeia: router({
+
+    criar: protectedProcedure
+      .input(z.object({
+        nome: z.string().min(3),
+        banco: z.string().min(2),
+        descricao: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return await criarCadeiaContratos(ctx.user.id, input);
+      }),
+
+    listar: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await listarCadeiasPorUsuario(ctx.user.id);
+      }),
+
+    buscar: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input, ctx }) => {
+        const cadeia = await buscarCadeiaComContratos(input.id);
+        if (!cadeia || cadeia.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Cadeia não encontrada" });
+        }
+        return cadeia;
+      }),
+
+    deletar: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const cadeia = await buscarCadeiaComContratos(input.id);
+        if (!cadeia || cadeia.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Cadeia não encontrada" });
+        }
+        await deletarCadeia(input.id);
+        return { success: true };
+      }),
+
+    adicionarContrato: protectedProcedure
+      .input(z.object({
+        cadeiaId: z.number(),
+        ordem: z.number().int().positive(),
+        tipo: z.enum(["original", "aditivo", "refinanciamento", "novacao", "renegociacao"]),
+        numeroContrato: z.string(),
+        dataContratacao: z.string(),
+        dataVencimento: z.string(),
+        modalidade: z.enum(["custeio", "investimento", "comercializacao", "outro"]),
+        valorContrato: z.number().positive(),
+        valorPrincipalOriginal: z.number().optional(),
+        valorEncargosIncorporados: z.number().optional(),
+        taxaJurosAnual: z.number().positive(),
+        taxaJurosMora: z.number().optional(),
+        numeroParcelas: z.number().int().optional(),
+        sistemaAmortizacao: z.enum(["price", "sac", "saf", "outro"]).optional(),
+        garantias: z.string().optional(),
+        observacoes: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const cadeia = await buscarCadeiaComContratos(input.cadeiaId);
+        if (!cadeia || cadeia.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Cadeia não encontrada" });
+        }
+        // Campos decimal no MySQL são armazenados como string
+        const dadosInsert: any = {
+          ...input,
+          valorContrato: String(input.valorContrato),
+          valorPrincipalOriginal: input.valorPrincipalOriginal !== undefined ? String(input.valorPrincipalOriginal) : undefined,
+          valorEncargosIncorporados: input.valorEncargosIncorporados !== undefined ? String(input.valorEncargosIncorporados) : undefined,
+          taxaJurosAnual: String(input.taxaJurosAnual),
+          taxaJurosMora: input.taxaJurosMora !== undefined ? String(input.taxaJurosMora) : undefined,
+        };
+        return await adicionarContratoCadeia(dadosInsert);
+      }),
+
+    atualizarContrato: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        cadeiaId: z.number(),
+        ordem: z.number().int().positive().optional(),
+        tipo: z.enum(["original", "aditivo", "refinanciamento", "novacao", "renegociacao"]).optional(),
+        numeroContrato: z.string().optional(),
+        dataContratacao: z.string().optional(),
+        dataVencimento: z.string().optional(),
+        modalidade: z.enum(["custeio", "investimento", "comercializacao", "outro"]).optional(),
+        valorContrato: z.number().positive().optional(),
+        valorPrincipalOriginal: z.number().optional(),
+        valorEncargosIncorporados: z.number().optional(),
+        taxaJurosAnual: z.number().positive().optional(),
+        taxaJurosMora: z.number().optional(),
+        numeroParcelas: z.number().int().optional(),
+        sistemaAmortizacao: z.enum(["price", "sac", "saf", "outro"]).optional(),
+        garantias: z.string().optional(),
+        observacoes: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const cadeia = await buscarCadeiaComContratos(input.cadeiaId);
+        if (!cadeia || cadeia.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Cadeia não encontrada" });
+        }
+        const { id: contratoId, cadeiaId: _cadeiaId, ...dadosAtualizar } = input;
+        // Campos decimal no MySQL são armazenados como string
+        const dadosConvertidos: any = { ...dadosAtualizar };
+        if (dadosConvertidos.valorContrato !== undefined) dadosConvertidos.valorContrato = String(dadosConvertidos.valorContrato);
+        if (dadosConvertidos.valorPrincipalOriginal !== undefined) dadosConvertidos.valorPrincipalOriginal = String(dadosConvertidos.valorPrincipalOriginal);
+        if (dadosConvertidos.valorEncargosIncorporados !== undefined) dadosConvertidos.valorEncargosIncorporados = String(dadosConvertidos.valorEncargosIncorporados);
+        if (dadosConvertidos.taxaJurosAnual !== undefined) dadosConvertidos.taxaJurosAnual = String(dadosConvertidos.taxaJurosAnual);
+        if (dadosConvertidos.taxaJurosMora !== undefined) dadosConvertidos.taxaJurosMora = String(dadosConvertidos.taxaJurosMora);
+        return await atualizarContratoCadeia(contratoId, dadosConvertidos);
+      }),
+
+    deletarContrato: protectedProcedure
+      .input(z.object({ id: z.number(), cadeiaId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const cadeia = await buscarCadeiaComContratos(input.cadeiaId);
+        if (!cadeia || cadeia.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Cadeia não encontrada" });
+        }
+        await deletarContratoCadeia(input.id);
+        return { success: true };
+      }),
+
+    analisar: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const cadeia = await buscarCadeiaComContratos(input.id);
+        if (!cadeia || cadeia.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Cadeia não encontrada" });
+        }
+        const contratos: ContratoNaCadeia[] = cadeia.contratos.map((c: any) => ({
+          id: c.id,
+          ordem: c.ordem,
+          tipo: c.tipo as TipoContrato,
+          numeroContrato: c.numeroContrato,
+          dataContratacao: c.dataContratacao,
+          dataVencimento: c.dataVencimento,
+          modalidade: c.modalidade,
+          valorContrato: parseFloat(c.valorContrato),
+          valorPrincipalOriginal: c.valorPrincipalOriginal ? parseFloat(c.valorPrincipalOriginal) : undefined,
+          valorEncargosIncorporados: c.valorEncargosIncorporados ? parseFloat(c.valorEncargosIncorporados) : undefined,
+          taxaJurosAnual: parseFloat(c.taxaJurosAnual),
+          taxaJurosMora: c.taxaJurosMora ? parseFloat(c.taxaJurosMora) : undefined,
+          numeroParcelas: c.numeroParcelas ?? undefined,
+          sistemaAmortizacao: c.sistemaAmortizacao ?? undefined,
+          garantias: c.garantias ?? undefined,
+          observacoes: c.observacoes ?? undefined,
+        }));
+        return analisarCadeiaContratual(contratos);
+      }),
+
+    gerarLaudo: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        nomeProdutor: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const cadeia = await buscarCadeiaComContratos(input.id);
+        if (!cadeia || cadeia.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Cadeia não encontrada" });
+        }
+        // Buscar perfil do perito e advogado
+        const perito = await buscarPerfilPerito(ctx.user.id);
+        const advogado = await buscarPerfilAdvogado(ctx.user.id);
+        const contratos: ContratoNaCadeia[] = cadeia.contratos.map((c: any) => ({
+          id: c.id,
+          ordem: c.ordem,
+          tipo: c.tipo as TipoContrato,
+          numeroContrato: c.numeroContrato,
+          dataContratacao: c.dataContratacao,
+          dataVencimento: c.dataVencimento,
+          modalidade: c.modalidade,
+          valorContrato: parseFloat(c.valorContrato),
+          valorPrincipalOriginal: c.valorPrincipalOriginal ? parseFloat(c.valorPrincipalOriginal) : undefined,
+          valorEncargosIncorporados: c.valorEncargosIncorporados ? parseFloat(c.valorEncargosIncorporados) : undefined,
+          taxaJurosAnual: parseFloat(c.taxaJurosAnual),
+          taxaJurosMora: c.taxaJurosMora ? parseFloat(c.taxaJurosMora) : undefined,
+          numeroParcelas: c.numeroParcelas ?? undefined,
+          sistemaAmortizacao: c.sistemaAmortizacao ?? undefined,
+          garantias: c.garantias ?? undefined,
+          observacoes: c.observacoes ?? undefined,
+        }));
+        const analise = analisarCadeiaContratual(contratos);
+        const laudo = await gerarLaudoCadeiaContratual({
+          nomeCadeia: cadeia.nome,
+          banco: cadeia.banco,
+          nomeProdutor: input.nomeProdutor,
+          nomeAdvogado: advogado?.nome ?? undefined,
+          oabAdvogado: advogado?.oab ?? undefined,
+          nomePerito: perito?.nome ?? undefined,
+          categoriaPerito: perito?.categoria ?? undefined,
+          registroPerito: perito?.registroProfissional ?? undefined,
+          contratos,
+          analise,
+        });
+        await salvarLaudoCadeia(input.id, laudo);
+        return { laudo, analise };
+      }),
+  }),
+
   historico: router({
 
     listar: publicProcedure.query(async ({ ctx }) => {

@@ -1,0 +1,16 @@
+{
+  "query": "SHOW TABLES LIKE 'perfil%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 29pA2ogac4Q4wNx.16908730d1e7 --database AwUVUek8dZCA2h8s3bwVHV --execute SHOW TABLES LIKE 'perfil%';",
+  "rows": [
+    {
+      "Tables_in_AwUVUek8dZCA2h8s3bwVHV (perfil%)": "perfil_advogado"
+    },
+    {
+      "Tables_in_AwUVUek8dZCA2h8s3bwVHV (perfil%)": "perfil_perito"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_AwUVUek8dZCA2h8s3bwVHV (perfil%)\nperfil_advogado\nperfil_perito\n",
+  "stderr": "",
+  "execution_time_ms": 127
+}

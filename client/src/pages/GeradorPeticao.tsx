@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, FileText, Download, Copy, CheckCircle, AlertCircle, Scale, Gavel, BookOpen } from "lucide-react";
+import { Loader2, FileText, Download, Copy, CheckCircle, AlertCircle, Scale, Gavel, BookOpen, UserCheck } from "lucide-react";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 // ─── Schema de Validação ──────────────────────────────────────────────────────
 
@@ -75,6 +76,9 @@ export default function GeradorPeticao() {
   const [copiado, setCopiado] = useState(false);
   const [tipoDocumento, setTipoDocumento] = useState<"peticao" | "laudo">("peticao");
 
+  // Carregar perfil do advogado automaticamente
+  const { data: perfilAdvogado } = trpc.perfil.buscarAdvogado.useQuery();
+
   const {
     register,
     handleSubmit,
@@ -89,6 +93,25 @@ export default function GeradorPeticao() {
       vara: "[VARA]",
     },
   });
+
+  // Pré-preencher campos do advogado quando o perfil for carregado
+  useEffect(() => {
+    if (perfilAdvogado) {
+      if (perfilAdvogado.nome) setValue("nomeAdvogado", perfilAdvogado.nome);
+      if (perfilAdvogado.oab) setValue("oab", perfilAdvogado.oab);
+      if (perfilAdvogado.telefone) setValue("telefoneAdvogado", perfilAdvogado.telefone);
+      if (perfilAdvogado.email) setValue("emailAdvogado", perfilAdvogado.email);
+      // Montar endereço do escritório
+      const partes = [
+        perfilAdvogado.escritorio,
+        perfilAdvogado.endereco,
+        perfilAdvogado.cidade,
+        perfilAdvogado.estado,
+        perfilAdvogado.cep,
+      ].filter(Boolean);
+      if (partes.length > 0) setValue("enderecoEscritorio", partes.join(", "));
+    }
+  }, [perfilAdvogado, setValue]);
 
   const gerarPeticao = trpc.peticao.gerar.useMutation({
     onSuccess: (data) => {
@@ -500,7 +523,20 @@ export default function GeradorPeticao() {
           <TabsContent value="advogado">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Dados do Advogado e Foro</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Dados do Advogado e Foro</CardTitle>
+                  {perfilAdvogado && (
+                    <div className="flex items-center gap-1.5 text-xs text-green-600 bg-green-50 border border-green-200 rounded-full px-3 py-1">
+                      <UserCheck className="h-3.5 w-3.5" />
+                      Perfil carregado automaticamente
+                    </div>
+                  )}
+                </div>
+                {!perfilAdvogado && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Cadastre seu perfil em <strong>Perfil Profissional</strong> para preencher estes campos automaticamente.
+                  </p>
+                )}
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

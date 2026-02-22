@@ -36,6 +36,20 @@
       "when": 1771782457926,
       "tag": "0004_romantic_vulcan",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1771783118609,
+      "tag": "0005_perfect_swarm",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1771783935874,
+      "tag": "0006_melted_randall_flagg",
+      "breakpoints": true
     }
   ]
 }

@@ -167,12 +167,9 @@ export default function LandingPage() {
     return Math.floor(mensal * 0.75);
   };
 
-  // Redireciona usuários já autenticados para o dashboard
-  useEffect(() => {
-    if (!loading && isAuthenticated) {
-      navigate("/app");
-    }
-  }, [isAuthenticated, loading, navigate]);
+  // Usuários autenticados podem ver a landing page normalmente
+  // O redirecionamento automático foi removido para que a landing page
+  // seja sempre exibida ao acessar "/", independente do estado de autenticação
 
   const handleLogin = () => {
     window.location.href = getLoginUrl();
@@ -197,13 +194,23 @@ export default function LandingPage() {
             <a href="#planos" className="hover:text-foreground transition-colors">Planos</a>
             <a href="#jurisprudencia" className="hover:text-foreground transition-colors">Jurisprudência</a>
           </div>
-          <button
-            onClick={handleLogin}
-            className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
-          >
-            Entrar / Cadastrar
-            <ArrowRight className="h-4 w-4" />
-          </button>
+          {isAuthenticated ? (
+            <button
+              onClick={() => navigate("/app")}
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
+            >
+              Acessar o Sistema
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              onClick={handleLogin}
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
+            >
+              Entrar / Cadastrar
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </nav>
 
@@ -233,10 +240,10 @@ export default function LandingPage() {
 
             <div className="flex flex-col sm:flex-row gap-4">
               <button
-                onClick={handleLogin}
+                onClick={isAuthenticated ? () => navigate("/app") : handleLogin}
                 className="bg-amber-400 hover:bg-amber-300 text-slate-900 font-semibold px-8 py-4 rounded-xl text-base transition-colors flex items-center justify-center gap-2 shadow-lg"
               >
-                Começar gratuitamente
+                {isAuthenticated ? "Acessar o Sistema" : "Começar gratuitamente"}
                 <ArrowRight className="h-5 w-5" />
               </button>
               <a
