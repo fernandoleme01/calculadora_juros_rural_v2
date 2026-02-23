@@ -168,14 +168,19 @@ export default function Calculadora() {
     }
   }, [setValue]);
 
-  const taxaRem = watch("taxaJurosRemuneratorios");
-  const taxaMora = watch("taxaJurosMora");
-  const taxaRemAtual = taxaRem;
-  const valorPrincipalAtual = watch("valorPrincipal");
-  const prazoMesesAtual = watch("prazoMeses");
+  // Converter strings para número (campos agora são type=text para evitar limitações do browser)
+  const _taxaRemRaw = watch("taxaJurosRemuneratorios");
+  const _taxaMoraRaw = watch("taxaJurosMora");
+  const _valorPrincipalRaw = watch("valorPrincipal");
+  const _prazoMesesRaw = watch("prazoMeses");
+  const parseNum = (v: unknown) => { const n = parseFloat(String(v ?? "").replace(",", ".")); return isNaN(n) ? 0 : n; };
+  const taxaRem = parseNum(_taxaRemRaw);
+  const taxaMora = parseNum(_taxaMoraRaw);
+  const valorPrincipalAtual = parseNum(_valorPrincipalRaw);
+  const prazoMesesAtual = parseNum(_prazoMesesRaw);
   const { data: comparativoMCR } = trpc.mcr.comparativo.useQuery(
-    { taxaContratadaAA: taxaRemAtual || 0, linhaId: linhaSelecionada, valorPrincipal: valorPrincipalAtual, prazoMeses: prazoMesesAtual },
-    { enabled: !!linhaSelecionada && linhaSelecionada !== "nenhuma" && !!taxaRemAtual && taxaRemAtual > 0 }
+    { taxaContratadaAA: taxaRem, linhaId: linhaSelecionada, valorPrincipal: valorPrincipalAtual, prazoMeses: prazoMesesAtual },
+    { enabled: !!linhaSelecionada && linhaSelecionada !== "nenhuma" && taxaRem > 0 }
   );
 
   const adicionarIpca = () => {
@@ -576,16 +581,16 @@ export default function Calculadora() {
               <Label htmlFor="valorPrincipal">Valor Principal (R$) *</Label>
               <Input
                 id="valorPrincipal"
-                type="number"
-                step="0.01"
-                placeholder="0,00"
+                type="text"
+                inputMode="decimal"
+                placeholder="Ex: 150000.00"
                 {...register("valorPrincipal")}
               />
               {errors.valorPrincipal && <p className="text-xs text-destructive">{errors.valorPrincipal.message}</p>}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="prazoMeses">Prazo (meses) *</Label>
-              <Input id="prazoMeses" type="number" placeholder="12" {...register("prazoMeses")} />
+              <Input id="prazoMeses" type="text" inputMode="numeric" placeholder="12" {...register("prazoMeses")} />
               {errors.prazoMeses && <p className="text-xs text-destructive">{errors.prazoMeses.message}</p>}
             </div>
             <div className="space-y-1.5">
@@ -623,9 +628,9 @@ export default function Calculadora() {
                 </Label>
                 <Input
                   id="taxaJurosRemuneratorios"
-                  type="number"
-                  step="0.01"
-                  placeholder="Ex: 7.00"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="Ex: 7.0286"
                   {...register("taxaJurosRemuneratorios")}
                   className={limiteRemExcedido ? "border-destructive" : ""}
                 />
@@ -643,9 +648,9 @@ export default function Calculadora() {
                 <div className="flex gap-2">
                   <Input
                     id="taxaJurosMora"
-                    type="number"
-                    step="0.001"
-                    placeholder={taxaMoraUnidade === "am" ? "2.000" : "1.000"}
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={taxaMoraUnidade === "am" ? "Ex: 2.0" : "Ex: 1.0"}
                     {...register("taxaJurosMora")}
                     className={limiteMoraExcedido ? "border-destructive flex-1" : "flex-1"}
                   />
@@ -675,7 +680,7 @@ export default function Calculadora() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="taxaMulta">Multa Contratual (%)</Label>
-                <Input id="taxaMulta" type="number" step="0.01" placeholder="2.00" {...register("taxaMulta")} />
+                <Input id="taxaMulta" type="text" inputMode="decimal" placeholder="Ex: 2.00" {...register("taxaMulta")} />
               </div>
             </div>
           </CardContent>
@@ -701,8 +706,8 @@ export default function Calculadora() {
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <Input
-                      type="number"
-                      step="0.0001"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="Variação IPCA mensal (%) — ex: 0.44"
                       value={novoIpca}
                       onChange={(e) => setNovoIpca(e.target.value)}
@@ -806,12 +811,12 @@ export default function Calculadora() {
               <strong>Atenção — Possível Ilegalidade Detectada:</strong>
               {limiteRemExcedido && (
                 <p className="mt-1 text-sm">
-                  • Juros remuneratórios de {taxaRem?.toFixed(2)}% a.a. excedem o limite de {limites?.jurosRemuneratoriosMaxAA ?? 12}% a.a. estabelecido pela jurisprudência consolidada do STJ (Decreto nº 22.626/33 — Lei de Usura).
+                  • Juros remuneratórios de {taxaRem.toFixed(2)}% a.a. excedem o limite de {limites?.jurosRemuneratoriosMaxAA ?? 12}% a.a. estabelecido pela jurisprudência consolidada do STJ (Decreto nº 22.626/33 — Lei de Usura).
                 </p>
               )}
               {limiteMoraExcedido && (
                 <p className="mt-1 text-sm">
-                  • Juros de mora de {taxaMora?.toFixed(3)}% a.a. excedem o limite de {limites?.jurosMoraMaxAA ?? 1}% a.a. estabelecido pelo Decreto-Lei nº 167/67, art. 5º.
+                  • Juros de mora de {taxaMoraEmAA.toFixed(3)}% a.a. excedem o limite de {limites?.jurosMoraMaxAA ?? 1}% a.a. estabelecido pelo Decreto-Lei nº 167/67, art. 5º.
                 </p>
               )}
             </AlertDescription>
@@ -842,22 +847,22 @@ export default function Calculadora() {
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="numeroParcelas">Nº Total de Parcelas do Contrato</Label>
-                <Input id="numeroParcelas" type="number" placeholder="Ex: 5" {...register("numeroParcelas")} />
+                <Input id="numeroParcelas" type="text" inputMode="numeric" placeholder="Ex: 5" {...register("numeroParcelas")} />
                 <p className="text-xs text-muted-foreground">Total previsto no contrato (safras ou meses)</p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="parcelasPagas">Nº de Parcelas Efetivamente Pagas</Label>
-                <Input id="parcelasPagas" type="number" placeholder="Ex: 3" {...register("parcelasPagas")} />
+                <Input id="parcelasPagas" type="text" inputMode="numeric" placeholder="Ex: 3" {...register("parcelasPagas")} />
                 <p className="text-xs text-muted-foreground">Quantas parcelas já foram quitadas</p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="valorParcelaPaga">Valor Médio da Parcela Paga (R$)</Label>
-                <Input id="valorParcelaPaga" type="number" step="0.01" placeholder="Ex: 25000.00" {...register("valorParcelaPaga")} />
+                <Input id="valorParcelaPaga" type="text" inputMode="decimal" placeholder="Ex: 25000.00" {...register("valorParcelaPaga")} />
                 <p className="text-xs text-muted-foreground">Valor efetivamente cobrado pelo banco por parcela</p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="saldoDevedorBanco">Saldo Devedor Informado pelo Banco (R$)</Label>
-                <Input id="saldoDevedorBanco" type="number" step="0.01" placeholder="Ex: 180000.00" {...register("saldoDevedorBanco")} />
+                <Input id="saldoDevedorBanco" type="text" inputMode="decimal" placeholder="Ex: 180000.00" {...register("saldoDevedorBanco")} />
                 <p className="text-xs text-muted-foreground">Saldo atual conforme extrato ou notificação do banco</p>
               </div>
               <div className="space-y-1.5 md:col-span-2">
