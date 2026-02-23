@@ -34,10 +34,26 @@ const formSchema = z.object({
   taxaJurosRemuneratorios: z.coerce.number().min(0).max(100),
   taxaJurosMora: z.coerce.number().min(0).max(100).default(1),
   taxaMulta: z.coerce.number().min(0).max(10).default(2),
-  taxaJm: z.coerce.number().optional(),
-  fatorInflacaoImplicita: z.coerce.number().optional(),
-  fatorPrograma: z.coerce.number().optional(),
-  fatorAjuste: z.coerce.number().default(0),
+  taxaJm: z.union([z.string(), z.number()]).optional().transform(v => {
+    if (v === "" || v === null || v === undefined) return undefined;
+    const n = typeof v === "number" ? v : parseFloat(String(v).replace(",", "."));
+    return isNaN(n) ? undefined : n;
+  }),
+  fatorInflacaoImplicita: z.union([z.string(), z.number()]).optional().transform(v => {
+    if (v === "" || v === null || v === undefined) return undefined;
+    const n = typeof v === "number" ? v : parseFloat(String(v).replace(",", "."));
+    return isNaN(n) ? undefined : n;
+  }),
+  fatorPrograma: z.union([z.string(), z.number()]).optional().transform(v => {
+    if (v === "" || v === null || v === undefined) return undefined;
+    const n = typeof v === "number" ? v : parseFloat(String(v).replace(",", "."));
+    return isNaN(n) ? undefined : n;
+  }),
+  fatorAjuste: z.union([z.string(), z.number()]).optional().transform(v => {
+    if (v === "" || v === null || v === undefined) return 0;
+    const n = typeof v === "number" ? v : parseFloat(String(v).replace(",", "."));
+    return isNaN(n) ? 0 : n;
+  }).default(0),
   // Parcelas pagas
   numeroParcelas: z.coerce.number().int().positive().optional(),
   parcelasPagas: z.coerce.number().int().min(0).optional(),
@@ -541,28 +557,52 @@ export default function Calculadora() {
                   <Label htmlFor="taxaJm">
                     Taxa Jm — Prefixada de Maio (% a.a.)
                   </Label>
-                  <Input id="taxaJm" type="number" step="0.0001" placeholder="Ex: 13.50" {...register("taxaJm")} />
+                  <Input
+                    id="taxaJm"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="Ex: 13.50"
+                    {...register("taxaJm")}
+                  />
                   <p className="text-xs text-muted-foreground">Calculada e divulgada em maio, vigência jul/ano a jun/ano seguinte</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="fatorInflacaoImplicita">
                     FII — Fator de Inflação Implícita
                   </Label>
-                  <Input id="fatorInflacaoImplicita" type="number" step="0.0000001" placeholder="Ex: 1.0500000" {...register("fatorInflacaoImplicita")} />
+                  <Input
+                    id="fatorInflacaoImplicita"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="Ex: 1.0500000"
+                    {...register("fatorInflacaoImplicita")}
+                  />
                   <p className="text-xs text-muted-foreground">Divulgado pelo BCB no último dia útil de abril</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="fatorPrograma">
                     FP — Fator de Programa
                   </Label>
-                  <Input id="fatorPrograma" type="number" step="0.0000001" placeholder="Ex: 0.1896008" {...register("fatorPrograma")} />
+                  <Input
+                    id="fatorPrograma"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="Ex: 0.1896008"
+                    {...register("fatorPrograma")}
+                  />
                   <p className="text-xs text-muted-foreground">Definido pelo CMN para cada linha de crédito (Res. CMN 5.153/2024)</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="fatorAjuste">
                     FA — Fator de Ajuste
                   </Label>
-                  <Input id="fatorAjuste" type="number" step="0.0000001" placeholder="0.0000000" {...register("fatorAjuste")} />
+                  <Input
+                    id="fatorAjuste"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.0000000"
+                    {...register("fatorAjuste")}
+                  />
                   <p className="text-xs text-muted-foreground">Padrão: 0 (zero) na ausência de resolução específica do CMN</p>
                 </div>
               </div>
