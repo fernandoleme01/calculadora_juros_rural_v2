@@ -239,6 +239,29 @@ export default function Calculadora() {
     if (dados.dataContratacao) setValue("dataContratacao", parseDataBR(dados.dataContratacao));
     if (dados.dataVencimento) setValue("dataVencimento", parseDataBR(dados.dataVencimento));
     setValue("modalidade", mapModalidade(dados.modalidade));
+
+    // ── Mora: detectar unidade automaticamente e pré-selecionar ──
+    if (dados.taxaJurosMora != null) {
+      setValue("taxaJurosMora", dados.taxaJurosMora);
+      const unidade = dados.taxaJurosMoraUnidade === "am" ? "am" : "aa";
+      setValue("taxaJurosMoraUnidade", unidade);
+      if (unidade === "am") {
+        // Avisar o usuário que a mora foi detectada em % a.m. e será convertida
+        const moraAA = ((Math.pow(1 + dados.taxaJurosMora / 100, 12) - 1) * 100).toFixed(4);
+        toast.warning(
+          `Mora detectada em % a.m. (${dados.taxaJurosMora}% a.m. = ${moraAA}% a.a.). Unidade selecionada automaticamente.`,
+          { duration: 6000 }
+        );
+      }
+    }
+
+    // ── Multa e encargos ──
+    if (dados.taxaMulta != null) setValue("taxaMulta", dados.taxaMulta);
+    if (dados.iof != null) setValue("iofCobrado", dados.iof);
+    if (dados.tac != null) setValue("tacCobrada", dados.tac);
+    if (dados.tec != null) setValue("tecCobrada", dados.tec);
+    if (dados.numeroParcelas != null) setValue("numeroParcelas", dados.numeroParcelas);
+
     // Detectar tipo de taxa pelo indexador
     if (dados.indexador === "prefixado") {
       setTipoTaxaSelecionada("pre_fixada");
@@ -319,21 +342,33 @@ export default function Calculadora() {
       )}
 
       {pdfExtraido && (
-        <Alert className="border-green-200 bg-green-50">
-          <FileText className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-sm text-green-700">
-            <strong>Contrato importado via PDF.</strong> Os campos abaixo foram pré-preenchidos pela IA — revise antes de calcular.
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="ml-2 h-6 text-xs text-green-700 hover:text-green-900"
-              onClick={() => { setPdfExtraido(false); setPdfUrl(null); setMostrarUpload(true); }}
-            >
-              Trocar PDF
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <div className="space-y-2">
+          <Alert className="border-green-200 bg-green-50">
+            <FileText className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-sm text-green-700">
+              <strong>Contrato importado via PDF.</strong> Os campos abaixo foram pré-preenchidos pela IA — revise antes de calcular.
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="ml-2 h-6 text-xs text-green-700 hover:text-green-900"
+                onClick={() => { setPdfExtraido(false); setPdfUrl(null); setMostrarUpload(true); }}
+              >
+                Trocar PDF
+              </Button>
+            </AlertDescription>
+          </Alert>
+          {taxaMoraUnidade === "am" && (
+            <Alert className="border-amber-300 bg-amber-50">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-xs text-amber-800">
+                <strong>Mora em % a.m. detectada automaticamente.</strong> O contrato expressa a mora em percentual ao mês.
+                O sistema selecionou a unidade <strong>% a.m.</strong> e exibe o equivalente anual ({taxaMoraEmAA.toFixed(4)}% a.a.) no campo abaixo.
+                O valor será convertido corretamente no cálculo.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

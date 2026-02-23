@@ -11,6 +11,15 @@ export interface DadosExtradosPDF {
   valorPrincipal: number | null;
   taxaJurosAnual: number | null;
   taxaJurosMensal: number | null;
+  // Mora com unidade original detectada pelo LLM
+  taxaJurosMora: number | null;             // valor como consta no contrato
+  taxaJurosMoraUnidade: "am" | "aa" | null; // unidade detectada automaticamente
+  taxaMulta: number | null;
+  iof: number | null;
+  tac: number | null;
+  tec: number | null;
+  numeroParcelas: number | null;
+  nomeBanco: string | null;
   prazoMeses: number | null;
   prazoAnos: number | null;
   dataContratacao: string | null;
