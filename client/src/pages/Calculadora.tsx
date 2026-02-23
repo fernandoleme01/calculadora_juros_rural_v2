@@ -125,7 +125,7 @@ export default function Calculadora() {
         sessionStorage.setItem("tcr_resultado", JSON.stringify(data));
         sessionStorage.setItem("tcr_input", JSON.stringify(getValues()));
       } catch { /* ignore quota errors */ }
-      setLocation("/resultado");
+      setLocation("/app/resultado");
     },
     onError: (err) => {
       toast.error("Erro ao calcular: " + err.message);

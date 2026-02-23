@@ -60,7 +60,7 @@ export default function Resultado() {
 
   useEffect(() => {
     if (!resultado) {
-      setLocation("/calculadora");
+      setLocation("/app/calculadora");
     }
   }, [resultado, setLocation]);
 
@@ -70,7 +70,7 @@ export default function Resultado() {
       sessionStorage.removeItem("tcr_resultado");
       sessionStorage.removeItem("tcr_input");
     } catch { /* ignore */ }
-    setLocation("/calculadora");
+    setLocation("/app/calculadora");
   };
 
   if (!resultado) return null;
@@ -546,7 +546,7 @@ export default function Resultado() {
         <Button onClick={handleNovoCalculo} variant="outline">
           <ArrowLeft className="h-4 w-4 mr-2" /> Novo Cálculo
         </Button>
-        <Button onClick={() => setLocation("/historico")} variant="outline">
+        <Button onClick={() => setLocation("/app/historico")} variant="outline">
           Ver Histórico
         </Button>
         <Button onClick={handleGerarPDF}>

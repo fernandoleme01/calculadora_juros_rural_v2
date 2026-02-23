@@ -216,7 +216,7 @@ export default function AnalisarContrato() {
       taxaMulta: d.taxaMulta ?? 2,
     }));
     toast.success("Dados do contrato carregados na calculadora!");
-    setLocation("/calculadora");
+    setLocation("/app/calculadora");
   };
 
   return (

@@ -130,7 +130,7 @@ export default function Home() {
 
       {/* Ações Principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setLocation("/calculadora")}>
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setLocation("/app/calculadora")}>
           <CardHeader>
             <CardTitle className="flex items-center gap-3 text-base">
               <div className="p-2 bg-primary/10 rounded-lg">
@@ -148,13 +148,13 @@ export default function Home() {
               <Badge variant="secondary">TCRpré (LTN/NTN-F)</Badge>
               <Badge variant="secondary">Validação Legal</Badge>
             </div>
-            <Button className="w-full mt-4" onClick={() => setLocation("/calculadora")}>
+            <Button className="w-full mt-4" onClick={() => setLocation("/app/calculadora")}>
               Iniciar Cálculo
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setLocation("/fundamentacao")}>
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setLocation("/app/fundamentacao")}>
           <CardHeader>
             <CardTitle className="flex items-center gap-3 text-base">
               <div className="p-2 bg-accent/20 rounded-lg">
@@ -173,7 +173,7 @@ export default function Home() {
               <Badge variant="outline">Lei de Usura</Badge>
               <Badge variant="outline">Res. CMN</Badge>
             </div>
-            <Button variant="outline" className="w-full mt-4" onClick={() => setLocation("/fundamentacao")}>
+            <Button variant="outline" className="w-full mt-4" onClick={() => setLocation("/app/fundamentacao")}>
               Ver Fundamentação
             </Button>
           </CardContent>

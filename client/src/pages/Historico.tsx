@@ -80,7 +80,7 @@ export default function Historico() {
             {!isAuthenticated && " — Faça login para salvar e acessar seu histórico pessoal"}
           </p>
         </div>
-        <Button onClick={() => setLocation("/calculadora")}>
+        <Button onClick={() => setLocation("/app/calculadora")}>
           <Calculator className="h-4 w-4 mr-2" />
           Novo Cálculo
         </Button>
@@ -96,7 +96,7 @@ export default function Historico() {
                 Realize um cálculo e marque a opção "Salvar no histórico" para que ele apareça aqui.
               </p>
             </div>
-            <Button onClick={() => setLocation("/calculadora")}>
+            <Button onClick={() => setLocation("/app/calculadora")}>
               <Calculator className="h-4 w-4 mr-2" />
               Realizar Primeiro Cálculo
             </Button>
