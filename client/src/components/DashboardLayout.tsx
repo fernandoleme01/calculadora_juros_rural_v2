@@ -21,27 +21,61 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Calculator, History, BookOpen, Scale, FileSearch, Landmark, Gavel, Shield, CreditCard, UserCog, BarChart3, Link2 } from "lucide-react";
+import {
+  LayoutDashboard, LogOut, PanelLeft, Calculator, History, BookOpen, Scale,
+  FileSearch, Landmark, Gavel, Shield, CreditCard, UserCog, BarChart3,
+  Link2, Upload, FilePen
+} from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "Painel Principal", path: "/app" },
-  { icon: Calculator, label: "Calculadora TCR", path: "/app/calculadora" },
-  { icon: BarChart3, label: "Amortização", path: "/app/amortizacao" },
-  { icon: Link2, label: "Cadeia de Contratos", path: "/app/cadeia-contratos" },
-  { icon: FileSearch, label: "Analisar Contrato PDF", path: "/app/analisar-contrato" },
-  { icon: Gavel, label: "Gerar Petição / Laudo", path: "/app/gerador-peticao" },
-  { icon: Scale, label: "Laudo Pericial", path: "/app/laudo-pericial" },
-  { icon: Gavel, label: "Petição DED/DDC", path: "/app/peticao-ded" },
-  { icon: Landmark, label: "Dados do BCB", path: "/app/dados-bcb" },
-  { icon: History, label: "Histórico", path: "/app/historico" },
-  { icon: BookOpen, label: "Fundamentação Legal", path: "/app/fundamentacao" },
-  { icon: UserCog, label: "Perfil Profissional", path: "/app/perfil" },
-  { icon: CreditCard, label: "Minha Assinatura", path: "/app/assinatura" },
+// Grupos semânticos do menu lateral
+const menuGroups = [
+  {
+    label: "Geral",
+    items: [
+      { icon: LayoutDashboard, label: "Painel Principal", path: "/app" },
+    ],
+  },
+  {
+    label: "Cálculo e Análise",
+    items: [
+      { icon: Calculator,  label: "Calculadora TCR",       path: "/app/calculadora" },
+      { icon: BarChart3,   label: "Tabela de Amortização", path: "/app/amortizacao" },
+      { icon: Link2,       label: "Cadeia de Contratos",   path: "/app/cadeia-contratos" },
+      { icon: Landmark,    label: "Dados do BCB",           path: "/app/dados-bcb" },
+    ],
+  },
+  {
+    label: "Documentos e Perícia",
+    items: [
+      { icon: Upload,       label: "Importar DED/DDC",       path: "/app/upload-ded" },
+      { icon: FileSearch,   label: "Analisar Contrato PDF",  path: "/app/analisar-contrato" },
+      { icon: Scale,        label: "Laudo Pericial",         path: "/app/laudo-pericial" },
+      { icon: FilePen,      label: "Gerar Petição / Laudo",  path: "/app/gerador-peticao" },
+      { icon: Gavel,        label: "Petição Exibição DED/DDC", path: "/app/peticao-ded" },
+    ],
+  },
+  {
+    label: "Referência",
+    items: [
+      { icon: BookOpen,  label: "Fundamentação Legal", path: "/app/fundamentacao" },
+      { icon: History,   label: "Histórico de Cálculos", path: "/app/historico" },
+    ],
+  },
+  {
+    label: "Conta",
+    items: [
+      { icon: UserCog,    label: "Perfil Profissional", path: "/app/perfil" },
+      { icon: CreditCard, label: "Minha Assinatura",    path: "/app/assinatura" },
+    ],
+  },
 ];
+
+// Lista plana para compatibilidade com activeMenuItem
+const menuItems = menuGroups.flatMap(g => g.items);
 
 // Item de menu exclusivo para administradores
 const adminMenuItem = { icon: Shield, label: "Painel Admin", path: "/app/admin" };
@@ -203,43 +237,57 @@ function DashboardLayoutContent({
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="gap-0">
+          <SidebarContent className="gap-0 overflow-y-auto">
             <SidebarMenu className="px-2 py-1">
-              {menuItems.map(item => {
-                const isActive = location === item.path;
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
-                    >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
-                      />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {menuGroups.map((group, gi) => (
+                <div key={group.label}>
+                  {/* Separador e label do grupo (oculto quando sidebar colapsada) */}
+                  {gi > 0 && (
+                    <div className="px-2 pt-3 pb-1 group-data-[collapsible=icon]:hidden">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 select-none">
+                        {group.label}
+                      </p>
+                    </div>
+                  )}
+                  {group.items.map(item => {
+                    const isActive = location === item.path;
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          isActive={isActive}
+                          onClick={() => setLocation(item.path)}
+                          tooltip={item.label}
+                          className="h-9 transition-all font-normal"
+                        >
+                          <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : ""}`} />
+                          <span className="truncate">{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </div>
+              ))}
+
               {/* Item de admin — visível apenas para administradores */}
               {user?.role === 'admin' && (() => {
                 const isActive = location === adminMenuItem.path;
                 return (
-                  <SidebarMenuItem key={adminMenuItem.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => setLocation(adminMenuItem.path)}
-                      tooltip={adminMenuItem.label}
-                      className="h-10 transition-all font-normal border-t border-sidebar-border mt-1 pt-1"
-                    >
-                      <adminMenuItem.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : "text-red-500"}`}
-                      />
-                      <span className="text-red-600 font-medium">{adminMenuItem.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <div className="pt-2">
+                    <div className="px-2 pb-1 group-data-[collapsible=icon]:hidden">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-red-500/60 select-none">Administração</p>
+                    </div>
+                    <SidebarMenuItem key={adminMenuItem.path}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        onClick={() => setLocation(adminMenuItem.path)}
+                        tooltip={adminMenuItem.label}
+                        className="h-9 transition-all font-normal"
+                      >
+                        <adminMenuItem.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : "text-red-500"}`} />
+                        <span className="text-red-600 font-medium">{adminMenuItem.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </div>
                 );
               })()}
             </SidebarMenu>

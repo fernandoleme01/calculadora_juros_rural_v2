@@ -339,5 +339,15 @@
 - [ ] Frontend: exibição dos dados extraídos com badge "Extraído do DED/DDC"
 - [ ] Frontend: botão "Preencher Calculadora" que navega para /app/calculadora com dados pré-preenchidos
 - [ ] Frontend: integração na Calculadora.tsx com banner de importação e campos marcados
-- [ ] App.tsx: rota /app/upload-ded registrada
-- [ ] DashboardLayout: item "Importar DED/DDC" no menu lateral
+- [x] App.tsx: rota /app/upload-ded registrada
+- [x] DashboardLayout: item "Importar DED/DDC" no menu lateral
+
+## Upload DED/DDC com Extração Automática via IA
+- [x] Backend: endpoint tRPC extrairDadosDEDDDC com LLM JSON schema estruturado
+- [x] Backend: extração de valor, taxas, parcelas, datas, banco, modalidade, IOF, TAC, TEC
+- [x] Frontend: componente UploadDEDDDC.tsx com drag-and-drop e progresso
+- [x] Frontend: exibição dos dados extraídos com checklist de campos
+- [x] Frontend: botão "Preencher Calculadora" com navegação e pré-preenchimento
+- [x] Frontend: página dedicada /app/upload-ded
+- [x] App.tsx: rota /app/upload-ded registrada
+- [x] DashboardLayout: item "Importar DED/DDC" no menu lateral

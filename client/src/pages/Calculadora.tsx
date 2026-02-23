@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -16,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calculator, Info, AlertTriangle, Plus, Trash2, FileText } from "lucide-react";
 import { toast } from "sonner";
 import UploadContratoPDF, { type DadosExtradosPDF } from "@/components/UploadContratoPDF";
+import { type DadosDEDDDC } from "@/components/UploadDEDDDC";
 
 const formSchema = z.object({
   nomeDevedor: z.string().optional(),
@@ -67,6 +69,7 @@ export default function Calculadora() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [mostrarParcelas, setMostrarParcelas] = useState(false);
   const [linhaSelecionada, setLinhaSelecionada] = useState<string>("nenhuma");
+  const [dedImportado, setDedImportado] = useState(false);
 
   const { data: limites } = trpc.tcr.limitesLegais.useQuery();
   const { data: linhasCredito } = trpc.mcr.linhas.useQuery();
@@ -101,6 +104,34 @@ export default function Calculadora() {
       dataCalculo: new Date().toISOString().split("T")[0],
     },
   });
+
+  // Ler dados importados do DED/DDC via sessionStorage
+  useEffect(() => {
+    const raw = sessionStorage.getItem("ded_ddc_dados");
+    if (!raw) return;
+    try {
+      const d: DadosDEDDDC = JSON.parse(raw);
+      sessionStorage.removeItem("ded_ddc_dados");
+      if (d.nomeDevedor) setValue("nomeDevedor", d.nomeDevedor);
+      if (d.numeroCedula) setValue("numeroCedula", d.numeroCedula);
+      if (d.valorPrincipal) setValue("valorPrincipal", d.valorPrincipal);
+      if (d.prazoMeses) setValue("prazoMeses", d.prazoMeses);
+      if (d.taxaJurosRemuneratoriosAA) setValue("taxaJurosRemuneratorios", d.taxaJurosRemuneratoriosAA);
+      if (d.taxaJurosMoraAA) setValue("taxaJurosMora", d.taxaJurosMoraAA);
+      if (d.taxaMulta) setValue("taxaMulta", d.taxaMulta);
+      if (d.iof) setValue("iofCobrado", d.iof);
+      if (d.tac) setValue("tacCobrada", d.tac);
+      if (d.tec) setValue("tecCobrada", d.tec);
+      if (d.numeroParcelas) setValue("numeroParcelas", d.numeroParcelas);
+      if (d.dataContratacao) setValue("dataContratacao", d.dataContratacao);
+      if (d.dataVencimento) setValue("dataVencimento", d.dataVencimento);
+      if (d.modalidade) setValue("modalidade", d.modalidade);
+      setDedImportado(true);
+      toast.success("Dados do DED/DDC importados! Verifique os campos destacados.");
+    } catch {
+      // ignorar erro de parse
+    }
+  }, [setValue]);
 
   const taxaRem = watch("taxaJurosRemuneratorios");
   const taxaMora = watch("taxaJurosMora");
@@ -189,6 +220,20 @@ export default function Calculadora() {
           Preencha os dados do financiamento para calcular a Taxa de Custo Real (TCR) com fundamentação legal.
         </p>
       </div>
+
+      {/* Banner de dados importados do DED/DDC */}
+      {dedImportado && (
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-green-500/40 bg-green-500/5">
+          <FileText className="h-5 w-5 text-green-500 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-green-700 dark:text-green-400">Dados importados do DED/DDC</p>
+            <p className="text-xs text-muted-foreground">Os campos foram pré-preenchidos automaticamente. Revise e ajuste se necessário.</p>
+          </div>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setDedImportado(false)} className="text-muted-foreground">
+            ✕
+          </Button>
+        </div>
+      )}
 
       {/* Botão de importar PDF */}
       {!pdfExtraido && !mostrarUpload && (

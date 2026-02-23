@@ -545,12 +545,143 @@ Seja formal, preciso e use linguagem juridica de peticao inicial.`;
           ],
         });
 
-        return {
+         return {
           peticao: response.choices[0]?.message?.content ?? "Nao foi possivel gerar a peticao.",
         };
       }),
-  }),
 
+    // ─── Upload e extração automática de DED/DDC via IA ───────────────────────────────────
+    extrairDadosDEDDDC: protectedProcedure
+      .input(
+        z.object({
+          pdfBase64: z.string().min(1, "PDF obrigatorio"),
+          nomeArquivo: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        // Decodificar base64 e fazer upload para S3
+        const buffer = Buffer.from(input.pdfBase64, "base64");
+        const nomeArq = input.nomeArquivo ?? `ded-ddc-${Date.now()}.pdf`;
+        const fileKey = `ded-ddc/${Date.now()}-${nomeArq}`;
+        const { url: pdfUrl } = await storagePut(fileKey, buffer, "application/pdf");
+
+        // Enviar PDF para o LLM via URL (file_url)
+        const response = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: `Voce e um perito contabil especialista em credito rural e analise de contratos bancarios. 
+Sua tarefa e extrair com precisao os dados financeiros de um Documento de Evolucao da Divida (DED/DDC) ou contrato de credito rural em PDF.
+Retorne APENAS um JSON valido com os campos solicitados. Se um campo nao for encontrado, retorne null para esse campo.
+Seja preciso com valores numericos: use ponto como separador decimal, sem simbolo de moeda.`,
+            },
+            {
+              role: "user",
+              content: [
+                {
+                  type: "file_url" as const,
+                  file_url: {
+                    url: pdfUrl,
+                    mime_type: "application/pdf" as const,
+                  },
+                },
+                {
+                  type: "text" as const,
+                  text: `Extraia os seguintes dados deste DED/DDC ou contrato de credito rural e retorne em JSON:
+{
+  "nomeBanco": string | null,
+  "numeroCedula": string | null,
+  "dataContratacao": string | null (formato YYYY-MM-DD),
+  "dataVencimento": string | null (formato YYYY-MM-DD),
+  "valorPrincipal": number | null (valor original em reais, sem juros),
+  "taxaJurosRemuneratoriosAA": number | null (percentual ao ano, ex: 8.5),
+  "taxaJurosMoraAA": number | null (percentual ao ano),
+  "taxaMulta": number | null (percentual),
+  "iof": number | null (valor em reais),
+  "tac": number | null (valor em reais),
+  "tec": number | null (valor em reais),
+  "prazoMeses": number | null,
+  "sistemaAmortizacao": "price" | "sac" | "saf" | null,
+  "modalidade": "custeio" | "investimento" | "comercializacao" | null,
+  "linhaCredito": string | null (ex: Pronaf Custeio, Moderfrota, FCO Rural),
+  "saldoDevedorAtual": number | null,
+  "totalPago": number | null,
+  "numeroParcelas": number | null,
+  "nomeDevedor": string | null,
+  "cpfCnpjDevedor": string | null,
+  "camposEncontrados": string[] (lista dos campos que foram encontrados no documento),
+  "camposAusentes": string[] (lista dos campos que NAO foram encontrados),
+  "observacoes": string | null (informacoes relevantes nao cobertas pelos campos acima)
+}`,
+                },
+              ],
+            },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "dados_ded_ddc",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  nomeBanco: { type: ["string", "null"] },
+                  numeroCedula: { type: ["string", "null"] },
+                  dataContratacao: { type: ["string", "null"] },
+                  dataVencimento: { type: ["string", "null"] },
+                  valorPrincipal: { type: ["number", "null"] },
+                  taxaJurosRemuneratoriosAA: { type: ["number", "null"] },
+                  taxaJurosMoraAA: { type: ["number", "null"] },
+                  taxaMulta: { type: ["number", "null"] },
+                  iof: { type: ["number", "null"] },
+                  tac: { type: ["number", "null"] },
+                  tec: { type: ["number", "null"] },
+                  prazoMeses: { type: ["number", "null"] },
+                  sistemaAmortizacao: { type: ["string", "null"] },
+                  modalidade: { type: ["string", "null"] },
+                  linhaCredito: { type: ["string", "null"] },
+                  saldoDevedorAtual: { type: ["number", "null"] },
+                  totalPago: { type: ["number", "null"] },
+                  numeroParcelas: { type: ["number", "null"] },
+                  nomeDevedor: { type: ["string", "null"] },
+                  cpfCnpjDevedor: { type: ["string", "null"] },
+                  camposEncontrados: { type: "array", items: { type: "string" } },
+                  camposAusentes: { type: "array", items: { type: "string" } },
+                  observacoes: { type: ["string", "null"] },
+                },
+                required: [
+                  "nomeBanco", "numeroCedula", "dataContratacao", "dataVencimento",
+                  "valorPrincipal", "taxaJurosRemuneratoriosAA", "taxaJurosMoraAA",
+                  "taxaMulta", "iof", "tac", "tec", "prazoMeses", "sistemaAmortizacao",
+                  "modalidade", "linhaCredito", "saldoDevedorAtual", "totalPago",
+                  "numeroParcelas", "nomeDevedor", "cpfCnpjDevedor",
+                  "camposEncontrados", "camposAusentes", "observacoes"
+                ],
+                additionalProperties: false,
+              },
+            },
+          },
+        });
+
+        const content = response.choices[0]?.message?.content;
+        if (!content || typeof content !== "string") {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "LLM nao retornou dados" });
+        }
+
+        let dados: Record<string, unknown>;
+        try {
+          dados = JSON.parse(content);
+        } catch {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Falha ao interpretar resposta da IA" });
+        }
+
+        return {
+          pdfUrl,
+          dados,
+          nomeArquivo: nomeArq,
+        };
+      }),
+  }),
   // ─── Banco Central (BCB) ─────────────────────────────────────────────────
   bcb: router({
 

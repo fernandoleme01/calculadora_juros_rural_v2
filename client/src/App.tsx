@@ -20,6 +20,7 @@ import Amortizacao from "./pages/Amortizacao";
 import CadeiaContratos from "./pages/CadeiaContratos";
 import LaudoPericial from "./pages/LaudoPericial";
 import PeticaoDEDDDC from "./pages/PeticaoDEDDDC";
+import UploadDED from "./pages/UploadDED";
 import Login from "./pages/Login";
 import DashboardLayout from "./components/DashboardLayout";
 
@@ -54,6 +55,7 @@ function DashboardRoutes() {
         <Route path="/app/cadeia-contratos" component={CadeiaContratos} />
         <Route path="/app/laudo-pericial" component={LaudoPericial} />
         <Route path="/app/peticao-ded" component={PeticaoDEDDDC} />
+        <Route path="/app/upload-ded" component={UploadDED} />
         <Route component={NotFound} />
       </Switch>
     </DashboardLayout>
