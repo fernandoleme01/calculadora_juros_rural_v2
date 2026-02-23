@@ -374,3 +374,10 @@
 - [x] Link no menu lateral (grupo Referência) e no rodapé
 - [x] Perguntas sobre fontes de dados (BCB, CMN, MCR)
 - [x] Perguntas sobre LGPD e segurança dos dados
+
+## Glossário de Termos Técnicos
+
+- [x] Página /glossario com termos organizados alfabeticamente
+- [x] Busca por termo e filtro por categoria
+- [x] Link no menu lateral (grupo Referência) e no rodapé
+- [x] Link na página de Fundamentação Legal

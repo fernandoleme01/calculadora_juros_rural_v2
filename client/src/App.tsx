@@ -25,6 +25,7 @@ import Login from "./pages/Login";
 import Privacidade from "./pages/Privacidade";
 import FAQ from "./pages/FAQ";
 import Termos from "./pages/Termos";
+import Glossario from "./pages/Glossario";
 import CookieBanner from "./components/CookieBanner";
 import DashboardLayout from "./components/DashboardLayout";
 
@@ -37,6 +38,7 @@ function PublicRoutes() {
       <Route path="/privacidade" component={Privacidade} />
       <Route path="/termos" component={Termos} />
       <Route path="/faq" component={FAQ} />
+      <Route path="/glossario" component={Glossario} />
     </Switch>
   );
 }
@@ -88,6 +90,7 @@ function Router() {
       <Route path="/privacidade" component={Privacidade} />
       <Route path="/termos" component={Termos} />
       <Route path="/faq" component={FAQ} />
+      <Route path="/glossario" component={Glossario} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

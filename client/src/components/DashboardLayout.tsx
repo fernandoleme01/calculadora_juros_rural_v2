@@ -24,7 +24,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import {
   LayoutDashboard, LogOut, PanelLeft, Calculator, History, BookOpen, Scale,
   FileSearch, Landmark, Gavel, Shield, CreditCard, UserCog, BarChart3,
-  Link2, Upload, FilePen, HelpCircle
+  Link2, Upload, FilePen, HelpCircle, Library
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -61,7 +61,8 @@ const menuGroups = [
   {
     label: "Referência",
     items: [
-      { icon: BookOpen,    label: "Fundamentação Legal", path: "/app/fundamentacao" },
+      { icon: BookOpen,    label: "Fundamentação Legal",  path: "/app/fundamentacao" },
+      { icon: Library,     label: "Glossário Técnico",     path: "/glossario" },
       { icon: HelpCircle,  label: "Perguntas Frequentes", path: "/faq" },
       { icon: History,     label: "Histórico de Cálculos", path: "/app/historico" },
     ],
