@@ -315,3 +315,17 @@
 - [x] Frontend: impressão/PDF do laudo gerado
 - [x] App.tsx: rota /app/laudo-pericial registrada
 - [x] DashboardLayout: item "Laudo Pericial" no menu lateral
+
+## Tela de Login Personalizada (LoboLab)
+- [x] Criar página /login com identidade visual LoboLab (logo, cores, nome do escritório)
+- [x] Botão "Acessar o Sistema" redireciona para OAuth Manus
+- [x] Registrar rota /login no App.tsx
+- [x] Atualizar botão "Acessar o Sistema" da landing page para ir para /login primeiro
+
+## Gerador de Petição de Exibição de DED/DDC
+- [x] Backend: endpoint tRPC gerarPeticaoDEDDDC com template jurídico via IA
+- [x] Backend: fundamentação no art. 6º III e VIII CDC + Res. CMN 5.004/2022 + arts. 396/399 CPC
+- [x] Frontend: página /app/peticao-ded com formulário de dados do processo e do banco
+- [x] Frontend: exibição e impressão da petição gerada
+- [x] App.tsx: rota /app/peticao-ded registrada
+- [x] DashboardLayout: item "Petição DED/DDC" no menu lateral

@@ -458,6 +458,97 @@ Seja formal, preciso e use linguagem de laudo judicial. Cite pelo menos 3 jurisp
           laudo: response.choices[0]?.message?.content ?? "Nao foi possivel gerar o laudo pericial.",
         };
       }),
+
+    // Gerador de Peticao de Exibicao de DED/DDC
+    gerarPeticaoDEDDDC: publicProcedure
+      .input(z.object({
+        numeroProcesso: z.string().default(""),
+        comarca: z.string().default(""),
+        vara: z.string().default(""),
+        juiz: z.string().default(""),
+        nomeAutor: z.string(),
+        cpfAutor: z.string().default(""),
+        enderecoAutor: z.string().default(""),
+        qualificacaoAutor: z.string().default("produtor rural"),
+        nomeBanco: z.string(),
+        cnpjBanco: z.string().default(""),
+        enderecoBanco: z.string().default(""),
+        numeroCedula: z.string().default(""),
+        dataContratacao: z.string().default(""),
+        valorContrato: z.number().optional(),
+        nomeAdvogado: z.string().default(""),
+        oab: z.string().default(""),
+        descricaoRecusa: z.string().default(""),
+        dataRecusa: z.string().default(""),
+        pedirInversaoOnus: z.boolean().default(true),
+        pedirTutelaUrgencia: z.boolean().default(false),
+        pedirMultaDiaria: z.boolean().default(true),
+        valorMultaDiaria: z.number().default(500),
+      }))
+      .mutation(async ({ input }) => {
+        const fmtBRL = (v: number) =>
+          v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+        const partes = [
+          `Processo n.: ${input.numeroProcesso || "___"}`,
+          `Comarca/Vara: ${input.comarca || "___"} - ${input.vara || "___"}`,
+          `Juiz(a): ${input.juiz || "___"}`,
+          `Autor: ${input.nomeAutor}, CPF: ${input.cpfAutor || "___"}, ${input.qualificacaoAutor}`,
+          `Endereco autor: ${input.enderecoAutor || "___"}`,
+          `Banco Reu: ${input.nomeBanco}, CNPJ: ${input.cnpjBanco || "___"}`,
+          `Endereco banco: ${input.enderecoBanco || "___"}`,
+          `Cedula/Contrato: ${input.numeroCedula || "___"}`,
+          `Data contratacao: ${input.dataContratacao || "___"}`,
+          input.valorContrato ? `Valor: ${fmtBRL(input.valorContrato)}` : "",
+          `Contexto recusa: ${input.descricaoRecusa || "Banco se recusou a fornecer o DED/DDC apesar de solicitacao formal."}`,
+          input.dataRecusa ? `Data recusa: ${input.dataRecusa}` : "",
+          `Pedidos: Exibicao DED/DDC | Inversao onus: ${input.pedirInversaoOnus ? "SIM" : "NAO"} | Tutela urgencia: ${input.pedirTutelaUrgencia ? "SIM" : "NAO"} | Multa diaria: ${input.pedirMultaDiaria ? fmtBRL(input.valorMultaDiaria) + "/dia" : "NAO"}`,
+          `Advogado: ${input.nomeAdvogado || "[Nome do Advogado]"}, OAB: ${input.oab || "___"}`,
+        ].filter(Boolean).join("\n");
+
+        const prompt = `Voce e um advogado especialista em Direito do Consumidor e Credito Rural. Elabore uma peticao judicial formal e completa de EXIBICAO DE DOCUMENTOS (DED/DDC), com linguagem tecnica e juridica de tribunal.
+
+${partes}
+
+Estruture a peticao com:
+EXMO(A). SR(A). DR(A). JUIZ(A) DE DIREITO [cabecalho completo]
+ACAO DE EXIBICAO DE DOCUMENTOS com pedido de INVERSAO DO ONUS DA PROVA e MULTA DIARIA POR DESCUMPRIMENTO
+
+I - DOS FATOS: descreva o contrato de credito rural, as tentativas de obter o DED/DDC, a recusa do banco e o prejuizo ao direito de defesa do autor.
+
+II - DO DIREITO: fundamente em:
+1. Art. 6o, III do CDC: direito a informacao adequada e clara
+2. Art. 6o, VIII do CDC: inversao do onus da prova
+3. Resolucao CMN n. 5.004/2022: obrigatoriedade de fornecimento do DED/DDC
+4. Arts. 396 a 404 do CPC: acao de exibicao de documentos
+5. Art. 399 do CPC: presuncao de veracidade em caso de descumprimento
+6. Art. 5o, XIV da CF/88: direito de acesso a informacao
+7. Cite 2 acordaos reais do STJ com numero de processo, relator, data, camara e ementa completa
+
+III - DOS PEDIDOS: exibicao do DED/DDC, inversao do onus, multa diaria, honorarios, custas
+
+IV - DO VALOR DA CAUSA
+
+V - REQUERIMENTOS FINAIS
+
+Local, data, assinatura do advogado com nome e OAB
+
+Seja formal, preciso e use linguagem juridica de peticao inicial.`;
+
+        const response = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: "Voce e um advogado especialista em Direito do Consumidor, Bancario e Credito Rural. Elabore peticoes judiciais formais, tecnicamente precisas e fundamentadas em legislacao e jurisprudencia reais do STJ.",
+            },
+            { role: "user", content: prompt },
+          ],
+        });
+
+        return {
+          peticao: response.choices[0]?.message?.content ?? "Nao foi possivel gerar a peticao.",
+        };
+      }),
   }),
 
   // ─── Banco Central (BCB) ─────────────────────────────────────────────────
