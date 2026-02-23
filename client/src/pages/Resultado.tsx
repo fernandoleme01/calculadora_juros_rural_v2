@@ -64,6 +64,15 @@ export default function Resultado() {
     }
   }, [resultado, setLocation]);
 
+  // Limpar sessionStorage ao sair da página de resultado (novo cálculo)
+  const handleNovoCalculo = () => {
+    try {
+      sessionStorage.removeItem("tcr_resultado");
+      sessionStorage.removeItem("tcr_input");
+    } catch { /* ignore */ }
+    setLocation("/calculadora");
+  };
+
   if (!resultado) return null;
 
   const conformidade = resultado.conformidade;
@@ -116,7 +125,7 @@ export default function Resultado() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setLocation("/calculadora")}>
+          <Button variant="outline" size="sm" onClick={handleNovoCalculo}>
             <ArrowLeft className="h-4 w-4 mr-1" /> Novo Cálculo
           </Button>
           <Button variant="outline" size="sm" onClick={handleGerarPDF}>
@@ -534,7 +543,7 @@ export default function Resultado() {
 
       {/* Ações */}
       <div className="flex gap-3 print:hidden">
-        <Button onClick={() => setLocation("/calculadora")} variant="outline">
+        <Button onClick={handleNovoCalculo} variant="outline">
           <ArrowLeft className="h-4 w-4 mr-2" /> Novo Cálculo
         </Button>
         <Button onClick={() => setLocation("/historico")} variant="outline">

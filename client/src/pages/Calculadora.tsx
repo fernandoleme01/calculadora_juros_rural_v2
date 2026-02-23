@@ -75,8 +75,23 @@ type FormValues = z.infer<typeof formSchema>;
 let resultadoTemp: unknown = null;
 let inputTemp: unknown = null;
 
-export function getResultadoTemp() { return resultadoTemp; }
-export function getInputTemp() { return inputTemp; }
+export function getResultadoTemp() {
+  // Primeiro tenta memória (navegação normal), depois sessionStorage (reload/direct URL)
+  if (resultadoTemp) return resultadoTemp;
+  try {
+    const raw = sessionStorage.getItem("tcr_resultado");
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return null;
+}
+export function getInputTemp() {
+  if (inputTemp) return inputTemp;
+  try {
+    const raw = sessionStorage.getItem("tcr_input");
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return null;
+}
 
 export default function Calculadora() {
   const [, setLocation] = useLocation();
@@ -106,6 +121,11 @@ export default function Calculadora() {
     onSuccess: (data) => {
       resultadoTemp = data;
       inputTemp = getValues();
+      // Persistir no sessionStorage para sobreviver a reload e acesso direto à URL
+      try {
+        sessionStorage.setItem("tcr_resultado", JSON.stringify(data));
+        sessionStorage.setItem("tcr_input", JSON.stringify(getValues()));
+      } catch { /* ignore quota errors */ }
       setLocation("/resultado");
     },
     onError: (err) => {
