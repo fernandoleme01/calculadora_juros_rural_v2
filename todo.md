@@ -351,3 +351,10 @@
 - [x] Frontend: página dedicada /app/upload-ded
 - [x] App.tsx: rota /app/upload-ded registrada
 - [x] DashboardLayout: item "Importar DED/DDC" no menu lateral
+
+## Checklist de Verificação DED/DDC
+- [x] Lógica de checklist: campos críticos (bloqueantes) e campos de aviso
+- [x] Componente ChecklistDEDDDC.tsx com status visual por campo
+- [x] Integração na página UploadDED após extração
+- [x] Integração na Calculadora.tsx quando dados vêm do DED/DDC
+- [x] Sugestão de ação corretiva para cada campo ausente

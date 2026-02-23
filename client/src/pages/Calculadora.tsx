@@ -18,6 +18,8 @@ import { Calculator, Info, AlertTriangle, Plus, Trash2, FileText } from "lucide-
 import { toast } from "sonner";
 import UploadContratoPDF, { type DadosExtradosPDF } from "@/components/UploadContratoPDF";
 import { type DadosDEDDDC } from "@/components/UploadDEDDDC";
+import ChecklistDEDDDC from "@/components/ChecklistDEDDDC";
+import { executarChecklist } from "@/lib/checklistDEDDDC";
 
 const formSchema = z.object({
   nomeDevedor: z.string().optional(),
@@ -70,6 +72,8 @@ export default function Calculadora() {
   const [mostrarParcelas, setMostrarParcelas] = useState(false);
   const [linhaSelecionada, setLinhaSelecionada] = useState<string>("nenhuma");
   const [dedImportado, setDedImportado] = useState(false);
+  const [dadosDED, setDadosDED] = useState<DadosDEDDDC | null>(null);
+  const [mostrarChecklistDED, setMostrarChecklistDED] = useState(false);
 
   const { data: limites } = trpc.tcr.limitesLegais.useQuery();
   const { data: linhasCredito } = trpc.mcr.linhas.useQuery();
@@ -112,6 +116,12 @@ export default function Calculadora() {
     try {
       const d: DadosDEDDDC = JSON.parse(raw);
       sessionStorage.removeItem("ded_ddc_dados");
+      setDadosDED(d);
+      // Verificar se há campos críticos ausentes para exibir checklist
+      const checklist = executarChecklist(d);
+      if (!checklist.podeCalcular || checklist.importantes.length > 0) {
+        setMostrarChecklistDED(true);
+      }
       if (d.nomeDevedor) setValue("nomeDevedor", d.nomeDevedor);
       if (d.numeroCedula) setValue("numeroCedula", d.numeroCedula);
       if (d.valorPrincipal) setValue("valorPrincipal", d.valorPrincipal);
@@ -223,15 +233,37 @@ export default function Calculadora() {
 
       {/* Banner de dados importados do DED/DDC */}
       {dedImportado && (
-        <div className="flex items-center gap-3 p-3 rounded-lg border border-green-500/40 bg-green-500/5">
-          <FileText className="h-5 w-5 text-green-500 shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-green-700 dark:text-green-400">Dados importados do DED/DDC</p>
-            <p className="text-xs text-muted-foreground">Os campos foram pré-preenchidos automaticamente. Revise e ajuste se necessário.</p>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 p-3 rounded-lg border border-green-500/40 bg-green-500/5">
+            <FileText className="h-5 w-5 text-green-500 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-green-700 dark:text-green-400">Dados importados do DED/DDC</p>
+              <p className="text-xs text-muted-foreground">Os campos foram pré-preenchidos automaticamente. Revise e ajuste se necessário.</p>
+            </div>
+            <div className="flex items-center gap-1">
+              {dadosDED && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMostrarChecklistDED(!mostrarChecklistDED)}
+                  className="text-xs h-7"
+                >
+                  {mostrarChecklistDED ? "Ocultar" : "Ver Checklist"}
+                </Button>
+              )}
+              <Button type="button" variant="ghost" size="sm" onClick={() => { setDedImportado(false); setMostrarChecklistDED(false); }} className="text-muted-foreground">
+                ✕
+              </Button>
+            </div>
           </div>
-          <Button type="button" variant="ghost" size="sm" onClick={() => setDedImportado(false)} className="text-muted-foreground">
-            ✕
-          </Button>
+          {mostrarChecklistDED && dadosDED && (
+            <ChecklistDEDDDC
+              dados={dadosDED}
+              onCalcular={() => setMostrarChecklistDED(false)}
+              className="border rounded-xl"
+            />
+          )}
         </div>
       )}
 

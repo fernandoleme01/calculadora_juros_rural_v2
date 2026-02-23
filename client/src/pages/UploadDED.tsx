@@ -1,9 +1,29 @@
 import UploadDEDDDC from "@/components/UploadDEDDDC";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FileSearch, AlertCircle, CheckCircle2 } from "lucide-react";
+import ChecklistDEDDDC from "@/components/ChecklistDEDDDC";
+import { type DadosDEDDDC } from "@/components/UploadDEDDDC";
+import { useLocation } from "wouter";
 
 export default function UploadDED() {
+  const [dadosExtraidos, setDadosExtraidos] = useState<DadosDEDDDC | null>(null);
+  const [, setLocation] = useLocation();
+
+  function handleDadosExtraidos(dados: DadosDEDDDC) {
+    setDadosExtraidos(dados);
+    setTimeout(() => {
+      document.getElementById("checklist-ded")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 300);
+  }
+
+  function handleCalcular() {
+    if (!dadosExtraidos) return;
+    sessionStorage.setItem("ded-dados", JSON.stringify(dadosExtraidos));
+    setLocation("/app/calculadora");
+  }
+
   return (
     <div className="container max-w-3xl py-6 space-y-6">
       {/* Cabeçalho */}
@@ -74,7 +94,21 @@ export default function UploadDED() {
       </Card>
 
       {/* Componente de upload */}
-      <UploadDEDDDC />
+      <UploadDEDDDC onDadosExtraidos={handleDadosExtraidos} />
+
+      {/* Checklist de verificação — aparece após extração */}
+      {dadosExtraidos && (
+        <div id="checklist-ded" className="space-y-2">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold">Verificação dos Dados Extraídos</h2>
+          </div>
+          <ChecklistDEDDDC
+            dados={dadosExtraidos}
+            onCalcular={handleCalcular}
+            className="border rounded-xl"
+          />
+        </div>
+      )}
     </div>
   );
 }
