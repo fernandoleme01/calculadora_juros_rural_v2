@@ -50,13 +50,13 @@ export async function setupVite(app: Express, server: Server) {
 /**
  * Resolve o caminho do diretório de build do cliente.
  * Tenta múltiplos candidatos para garantir compatibilidade em todos os
- * ambientes de produção (local, Manus, Docker, etc.).
+ * ambientes de produção.
  */
 function resolveDistPath(): string {
   const candidates = [
     // Quando o bundle está em dist/index.js → dist/public
     path.resolve(import.meta.dirname, "public"),
-    // Quando executado a partir da raiz do projeto (ts-node / tsx)
+    // Quando executado a partir da raiz do projeto
     path.resolve(import.meta.dirname, "../..", "dist", "public"),
     // Caminho absoluto baseado em process.cwd()
     path.resolve(process.cwd(), "dist", "public"),
@@ -66,15 +66,14 @@ function resolveDistPath(): string {
 
   for (const candidate of candidates) {
     if (fs.existsSync(path.join(candidate, "index.html"))) {
-      console.log(`[serveStatic] Usando distPath: ${candidate}`);
+      console.log(`[serveStatic] distPath resolvido: ${candidate}`);
       return candidate;
     }
   }
 
-  // Se nenhum candidato tiver index.html, usa o primeiro e loga o aviso
   const fallback = candidates[0];
   console.error(
-    `[serveStatic] AVISO: index.html não encontrado em nenhum candidato. Tentados:\n` +
+    `[serveStatic] AVISO: index.html não encontrado. Candidatos testados:\n` +
     candidates.map((c) => `  - ${c}`).join("\n") +
     `\nUsando fallback: ${fallback}`
   );
@@ -83,17 +82,31 @@ function resolveDistPath(): string {
 
 export function serveStatic(app: Express) {
   const distPath = resolveDistPath();
+  const indexPath = path.resolve(distPath, "index.html");
 
+  // Health check — confirma que o Express está respondendo
+  app.get("/__health", (_req, res) => {
+    res.json({
+      status: "ok",
+      distPath,
+      indexExists: fs.existsSync(indexPath),
+      cwd: process.cwd(),
+      dirname: import.meta.dirname,
+    });
+  });
+
+  // Arquivos estáticos (JS, CSS, assets)
   app.use(express.static(distPath));
 
-  // Catch-all: serve index.html para qualquer rota não-API (SPA React)
-  app.use("*", (_req, res) => {
-    const indexPath = path.resolve(distPath, "index.html");
+  // SPA fallback: qualquer GET que não seja API ou arquivo estático
+  // Usar app.get em vez de app.use para evitar conflitos com outros métodos
+  app.get("*", (_req, res) => {
     if (fs.existsSync(indexPath)) {
       res.sendFile(indexPath);
     } else {
       res.status(500).send(
-        "Erro interno: index.html não encontrado. Verifique o build do cliente."
+        `[Juros Rurais Pro] Erro: index.html não encontrado em ${indexPath}. ` +
+        `Verifique o build do cliente.`
       );
     }
   });
