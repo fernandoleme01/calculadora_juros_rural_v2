@@ -68,11 +68,26 @@ type PeticaoForm = z.infer<typeof peticaoSchema>;
 // ─── Componente Principal ─────────────────────────────────────────────────────
 
 export default function GeradorPeticao() {
-  const [resultado, setResultado] = useState<{
+  const [resultado, setResultadoState] = useState<{
     titulo: string;
     textoCompleto: string;
     dataEmissao: string;
-  } | null>(null);
+  } | null>(() => {
+    // Restaurar do sessionStorage ao montar (sobrevive a reload)
+    try {
+      const raw = sessionStorage.getItem("peticao_resultado");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+
+  function setResultado(val: { titulo: string; textoCompleto: string; dataEmissao: string; } | null) {
+    setResultadoState(val);
+    try {
+      if (val) sessionStorage.setItem("peticao_resultado", JSON.stringify(val));
+      else sessionStorage.removeItem("peticao_resultado");
+    } catch { /* ignore */ }
+  }
+
   const [copiado, setCopiado] = useState(false);
   const [tipoDocumento, setTipoDocumento] = useState<"peticao" | "laudo">("peticao");
 

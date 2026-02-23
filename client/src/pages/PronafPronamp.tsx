@@ -193,7 +193,7 @@ export default function PronafPronamp() {
 
   const utils = trpc.useUtils();
 
-  const [resultado, setResultado] = useState<{
+  const [resultado, setResultadoState] = useState<{
     programa: string; grupo: string; nomeGrupo: string; finalidade: string;
     taxaContratadaAA: number; taxaLimiteAA: number; diferencaPP: number;
     excede: boolean; percentualExcesso: number; excessoJurosEstimadoR?: number;
@@ -202,7 +202,21 @@ export default function PronafPronamp() {
     taxaEfetivaComBonusAA?: number; economiaBonusR?: number;
     veredicto: string; textoVeredicto: string; fundamentacaoLegal: string;
     textoLaudo: string; alertas: string[];
-  } | null>(null);
+  } | null>(() => {
+    // Restaurar do sessionStorage ao montar (sobrevive a reload)
+    try {
+      const raw = sessionStorage.getItem("pronaf_resultado");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+
+  function setResultado(val: typeof resultado) {
+    setResultadoState(val);
+    try {
+      if (val) sessionStorage.setItem("pronaf_resultado", JSON.stringify(val));
+      else sessionStorage.removeItem("pronaf_resultado");
+    } catch { /* ignore */ }
+  }
 
   // Filtrar tabela comparativa
   const linhasFiltradas = useMemo(() => {
