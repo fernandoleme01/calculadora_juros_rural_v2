@@ -77,6 +77,11 @@ export interface ResultadoComparativoPronaf {
   excede: boolean;
   percentualExcesso: number;         // Excesso em % relativo à taxa limite
   excessoJurosEstimadoR?: number;    // Excesso em R$ (se principal e prazo informados)
+  // Bônus de adimplência (Pronaf A e B)
+  temBonusAdimplencia: boolean;       // Se o grupo tem direito ao bônus
+  percentualBonus: number;            // Percentual do bônus (0 ou 25)
+  taxaEfetivaComBonusAA?: number;     // Taxa efetiva após aplicação do bônus
+  economiaBonusR?: number;            // Economia em R$ com o bônus (se principal e prazo informados)
   veredicto: "regular" | "excesso" | "nao_enquadrado";
   textoVeredicto: string;
   fundamentacaoLegal: string;
@@ -415,6 +420,8 @@ export function calcularComparativoPronaf(dados: DadosAnalise): ResultadoCompara
       diferencaPP: dados.taxaContratadaAA - 5.0,
       excede: dados.taxaContratadaAA > 5.0,
       percentualExcesso: 0,
+      temBonusAdimplencia: false,
+      percentualBonus: 0,
       veredicto: "nao_enquadrado",
       textoVeredicto: "Grupo Pronaf não identificado.",
       fundamentacaoLegal: "MCR 7-6; Res. CMN 5.099/2022",
@@ -431,17 +438,39 @@ export function calcularComparativoPronaf(dados: DadosAnalise): ResultadoCompara
   const excede = diferenca > 0.001; // tolerância de 0,001 p.p.
   const percentualExcesso = taxaLimite > 0 ? (diferenca / taxaLimite) * 100 : 0;
 
-  // Calcular excesso em R$ (Price simplificado)
+  // ── Bônus de adimplência (Pronaf A, A/C e B) ─────────────────────────────
+  // MCR 7-6, Tabela 1: grupos A, A/C e B têm direito a bônus de 25% sobre os
+  // encargos financeiros para pagamento em dia (adimplência).
+  const GRUPOS_COM_BONUS: string[] = ["A", "A/C", "B"];
+  const PERCENTUAL_BONUS = 25; // 25% de desconto sobre os juros
+
+  const temBonusAdimplencia = GRUPOS_COM_BONUS.includes(grupo);
+  const percentualBonus = temBonusAdimplencia ? PERCENTUAL_BONUS : 0;
+  const taxaEfetivaComBonusAA = temBonusAdimplencia
+    ? taxaLimite * (1 - PERCENTUAL_BONUS / 100)
+    : undefined;
+
+  // Calcular excesso em R$ e economia do bônus (Price simplificado)
   let excessoJurosEstimadoR: number | undefined;
-  if (dados.valorPrincipal && dados.prazoMeses && dados.prazoMeses > 0 && excede) {
-    const calcJuros = (taxaAA: number) => {
-      const im = Math.pow(1 + taxaAA / 100, 1 / 12) - 1;
-      if (im === 0) return 0;
-      const pmt = (dados.valorPrincipal! * im * Math.pow(1 + im, dados.prazoMeses!)) /
-                  (Math.pow(1 + im, dados.prazoMeses!) - 1);
-      return pmt * dados.prazoMeses! - dados.valorPrincipal!;
-    };
-    excessoJurosEstimadoR = Math.max(0, calcJuros(dados.taxaContratadaAA) - calcJuros(taxaLimite));
+  let economiaBonusR: number | undefined;
+
+  const calcJuros = (taxaAA: number) => {
+    if (!dados.valorPrincipal || !dados.prazoMeses || dados.prazoMeses <= 0) return 0;
+    const im = Math.pow(1 + taxaAA / 100, 1 / 12) - 1;
+    if (im === 0) return 0;
+    const pmt = (dados.valorPrincipal * im * Math.pow(1 + im, dados.prazoMeses)) /
+                (Math.pow(1 + im, dados.prazoMeses) - 1);
+    return pmt * dados.prazoMeses - dados.valorPrincipal;
+  };
+
+  if (dados.valorPrincipal && dados.prazoMeses && dados.prazoMeses > 0) {
+    if (excede) {
+      excessoJurosEstimadoR = Math.max(0, calcJuros(dados.taxaContratadaAA) - calcJuros(taxaLimite));
+    }
+    if (temBonusAdimplencia && taxaEfetivaComBonusAA !== undefined) {
+      // Economia = juros sem bônus - juros com bônus (calculado sobre a taxa limite)
+      economiaBonusR = Math.max(0, calcJuros(taxaLimite) - calcJuros(taxaEfetivaComBonusAA));
+    }
   }
 
   const alertas: string[] = [];
@@ -496,6 +525,10 @@ export function calcularComparativoPronaf(dados: DadosAnalise): ResultadoCompara
     excede,
     percentualExcesso,
     excessoJurosEstimadoR,
+    temBonusAdimplencia,
+    percentualBonus,
+    taxaEfetivaComBonusAA,
+    economiaBonusR,
     veredicto: excede ? "excesso" : "regular",
     textoVeredicto,
     fundamentacaoLegal: `${grupoInfo.fundamentacaoMCR}; ${grupoInfo.resolucao}; Lei 11.326/2006`,
@@ -586,6 +619,8 @@ FUNDAMENTAÇÃO LEGAL:
     excede,
     percentualExcesso,
     excessoJurosEstimadoR,
+    temBonusAdimplencia: false,  // Pronamp não tem bônus de adimplência
+    percentualBonus: 0,
     veredicto: excede ? "excesso" : "regular",
     textoVeredicto,
     fundamentacaoLegal: `${PRONAMP_INFO.fundamentacaoMCR}; ${PRONAMP_INFO.resolucao}`,

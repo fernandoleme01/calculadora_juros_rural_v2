@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   AlertTriangle, CheckCircle2, Info, Search, Calculator,
-  BookOpen, Copy, ChevronDown, ChevronUp, Sprout, Users
+  BookOpen, Copy, ChevronDown, ChevronUp, Sprout, Users, TrendingDown
 } from "lucide-react";
 
 // ─── Helpers de formatação ────────────────────────────────────────────────────
@@ -63,10 +63,12 @@ function GrupoCard({ grupo, onSelecionar }: GrupoCardProps) {
     grupo.taxaInvestimentoAA ?? Infinity
   );
 
-  const corBadge = taxaMin <= 0.5 ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+      const corBadge = taxaMin <= 0.5 ? "bg-emerald-100 text-emerald-800 border-emerald-200"
     : taxaMin <= 3.0 ? "bg-green-100 text-green-800 border-green-200"
     : taxaMin <= 5.0 ? "bg-blue-100 text-blue-800 border-blue-200"
     : "bg-amber-100 text-amber-800 border-amber-200";
+
+  const temBonus = grupo.grupo === "A" || grupo.grupo === "A/C" || grupo.grupo === "B";
 
   return (
     <Card className="border hover:border-primary/40 transition-colors">
@@ -75,18 +77,29 @@ function GrupoCard({ grupo, onSelecionar }: GrupoCardProps) {
           <div className="flex-1 min-w-0">
             <CardTitle className="text-sm font-semibold leading-tight">{grupo.nome}</CardTitle>
             <CardDescription className="text-xs mt-1 line-clamp-2">{grupo.descricao}</CardDescription>
+            {temBonus && (
+              <span className="inline-flex items-center gap-1 mt-1.5 text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                <Sprout className="h-3 w-3" />
+                Bônus adimplência 25%
+              </span>
+            )}
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
-            {grupo.taxaCusteioAA !== null && (
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${corBadge}`}>
-                Custeio: {fmtPct(grupo.taxaCusteioAA)}
-              </span>
-            )}
-            {grupo.taxaInvestimentoAA !== null && (
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${corBadge}`}>
-                Invest.: {fmtPct(grupo.taxaInvestimentoAA)}
-              </span>
-            )}
+                            {grupo.taxaCusteioAA !== null && (
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${corBadge}`}>
+                                Custeio: {fmtPct(grupo.taxaCusteioAA)}
+                              </span>
+                            )}
+                            {grupo.taxaInvestimentoAA !== null && (
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${corBadge}`}>
+                                Invest.: {fmtPct(grupo.taxaInvestimentoAA)}
+                              </span>
+                            )}
+                            {temBonus && (
+                              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                ↓ 25% bônus
+                              </span>
+                            )}
           </div>
         </div>
       </CardHeader>
@@ -184,6 +197,9 @@ export default function PronafPronamp() {
     programa: string; grupo: string; nomeGrupo: string; finalidade: string;
     taxaContratadaAA: number; taxaLimiteAA: number; diferencaPP: number;
     excede: boolean; percentualExcesso: number; excessoJurosEstimadoR?: number;
+    // Bônus de adimplência
+    temBonusAdimplencia: boolean; percentualBonus: number;
+    taxaEfetivaComBonusAA?: number; economiaBonusR?: number;
     veredicto: string; textoVeredicto: string; fundamentacaoLegal: string;
     textoLaudo: string; alertas: string[];
   } | null>(null);
@@ -358,6 +374,7 @@ export default function PronafPronamp() {
                       <th className="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Taxa Máx. (a.a.)</th>
                       <th className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Renda Máx. Anual</th>
                       <th className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Limite Anual</th>
+                      <th className="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Bônus</th>
                       <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Base Legal</th>
                     </tr>
                   </thead>
@@ -398,6 +415,16 @@ export default function PronafPronamp() {
                           </td>
                           <td className="px-4 py-3 text-right text-xs text-muted-foreground">
                             {linha.limiteAnual !== null ? fmtBRL(linha.limiteAnual) : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {["A", "A/C", "B"].includes(linha.grupo) ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                <Sprout className="h-3 w-3" />
+                                25%
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-xs text-muted-foreground max-w-48">
                             {linha.fundamentacao}
@@ -723,6 +750,52 @@ export default function PronafPronamp() {
                         <strong>{fmtBRL(toNum(resultado.excessoJurosEstimadoR) * 2)}</strong>.
                       </AlertDescription>
                     </Alert>
+                  )}
+
+                  {/* Bônus de Adimplência */}
+                  {resultado.temBonusAdimplencia && (
+                    <Card className="border-emerald-200 bg-emerald-50">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-2 text-emerald-800">
+                          <Sprout className="h-4 w-4 text-emerald-600" />
+                          Bônus de Adimplência — {resultado.percentualBonus}% de Desconto
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0 space-y-3">
+                        <p className="text-xs text-emerald-700">
+                          O <strong>{resultado.nomeGrupo}</strong> tem direito a bônus de{" "}
+                          <strong>{resultado.percentualBonus}% sobre os encargos financeiros</strong>{" "}
+                          para pagamento em dia, conforme MCR 7-6, Tabela 1 (Res. CMN 5.099/2022).
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-white/70 rounded-lg border border-emerald-200 p-3 text-center">
+                            <p className="text-xs text-emerald-600 font-medium">Taxa Limite Legal</p>
+                            <p className="text-xl font-bold text-emerald-800">{fmtPct(resultado.taxaLimiteAA)}</p>
+                            <p className="text-xs text-emerald-500">sem bônus</p>
+                          </div>
+                          <div className="bg-emerald-100 rounded-lg border border-emerald-300 p-3 text-center">
+                            <p className="text-xs text-emerald-600 font-medium">Taxa Efetiva c/ Bônus</p>
+                            <p className="text-xl font-bold text-emerald-900">{fmtPct(resultado.taxaEfetivaComBonusAA ?? 0)}</p>
+                            <p className="text-xs text-emerald-600 font-semibold">↓ {resultado.percentualBonus}% de desconto</p>
+                          </div>
+                        </div>
+                        {resultado.economiaBonusR !== undefined && resultado.economiaBonusR > 0 && (
+                          <div className="bg-white/70 rounded-lg border border-emerald-200 p-3">
+                            <p className="text-xs text-emerald-700 font-semibold mb-1">Economia Estimada com o Bônus</p>
+                            <p className="text-lg font-bold text-emerald-800">{fmtBRL(resultado.economiaBonusR)}</p>
+                            <p className="text-xs text-emerald-600 mt-0.5">
+                              Calculado pelo sistema Price sobre o prazo informado.
+                              Se o banco não aplicou o bônus a que o beneficiário faz jus, este valor pode ser objeto de restituição.
+                            </p>
+                          </div>
+                        )}
+                        <div className="bg-amber-50 border border-amber-200 rounded p-2 text-xs text-amber-800">
+                          <strong>Atenção:</strong> O bônus de adimplência só é aplicado se o beneficiário estiver em dia com
+                          todos os pagamentos. A não aplicação indevida do bônus pode ser questionada judicialmente.
+                          Base legal: MCR 7-6, Tabela 1; Res. CMN 5.099/2022.
+                        </div>
+                      </CardContent>
+                    </Card>
                   )}
 
                   {/* Alertas */}
