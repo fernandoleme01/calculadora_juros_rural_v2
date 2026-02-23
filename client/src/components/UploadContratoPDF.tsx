@@ -34,6 +34,11 @@ export interface DadosExtradosPDF {
   finalidade: string | null;
   garantias: string | null;
   observacoes: string | null;
+  // Capitalização mensal (anatocismo)
+  temCapitalizacaoMensal: boolean | null;
+  clausulaCapitalizacao: string | null;  // texto exato da cláusula detectada
+  indicioCapitalizacao: "taxa_composta" | "clausula_expressa" | "sistema_price" | "taxa_dupla" | null;
+  taxaMensalContrato: number | null;     // taxa mensal expressa no contrato
 }
 
 interface Props {

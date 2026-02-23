@@ -1254,7 +1254,16 @@ Seja preciso com valores numericos: use ponto como separador decimal, sem simbol
         const { url: pdfUrl } = await storagePut(fileKey, buffer, "application/pdf");
 
         // 2. LLM extrai dados estruturados do PDF
-        const systemPrompt = `Você é um especialista em crédito rural brasileiro. Analise o contrato fornecido e extraia os dados estruturados. Retorne APENAS JSON válido, sem markdown.`;
+        const systemPrompt = `Você é um especialista em crédito rural brasileiro e perito contabil judicial. Analise o contrato fornecido e extraia os dados estruturados com atenção especial às cláusulas de capitalização de juros (anatocismo). Retorne APENAS JSON válido, sem markdown.
+
+Para detectar capitalização mensal (anatocismo), procure:
+- Cláusulas que mencionam "capitalização mensal", "juros sobre juros", "juros compostos mensais"
+- Taxas expressas SIMULTANEAMENTE em % a.m. E % a.a. onde a conversão não é linear (ex: 1,5% a.m. e 19,56% a.a. em vez de 18% a.a.) — isso indica capitalização composta
+- Cláusulas do tipo "os juros serão capitalizados mensalmente", "juros incorporados ao saldo devedor mensalmente"
+- Uso do Sistema Price (tabela Price) com taxa mensal — o Price implica capitalização composta por natureza
+- Termos como "juros vencidos e não pagos serão incorporados ao capital"
+- Qualquer menção a "taxa efetiva" versus "taxa nominal" com periodicidade mensal
+Se detectar qualquer um desses indícios, registre a cláusula exata encontrada.`;
         const userPrompt = `Extraia os dados do contrato de crédito rural. Se não encontrar um campo, use null.
 
 Retorne exatamente:
@@ -1283,7 +1292,11 @@ Retorne exatamente:
   "cpfCnpjDevedor": <CPF ou CNPJ>,
   "finalidade": <descrição da finalidade>,
   "garantias": <descrição das garantias>,
-  "observacoes": <cláusulas suspeitas, encargos adicionais, comissões>
+  "observacoes": <cláusulas suspeitas, encargos adicionais, comissões>,
+  "temCapitalizacaoMensal": <true se detectou capitalização mensal de juros (anatocismo), false se não detectou>,
+  "clausulaCapitalizacao": <texto exato da cláusula de capitalização encontrada no contrato, ou null se não encontrou>,
+  "indicioCapitalizacao": <tipo de indício detectado: "taxa_composta" | "clausula_expressa" | "sistema_price" | "taxa_dupla" | null>,
+  "taxaMensalContrato": <valor numérico da taxa mensal se expressa no contrato (ex: 1.5 para 1,5% a.m.), ou null>
 }`;
 
         const response = await invokeLLM({
@@ -1330,6 +1343,10 @@ Retorne exatamente:
                   finalidade: { type: ["string", "null"] },
                   garantias: { type: ["string", "null"] },
                   observacoes: { type: ["string", "null"] },
+                  temCapitalizacaoMensal: { type: "boolean" },
+                  clausulaCapitalizacao: { type: ["string", "null"] },
+                  indicioCapitalizacao: { type: ["string", "null"] },
+                  taxaMensalContrato: { type: ["number", "null"] },
                 },
                 required: [
                   "valorPrincipal", "taxaJurosAnual", "taxaJurosMensal",
@@ -1339,6 +1356,8 @@ Retorne exatamente:
                   "banco", "modalidade", "sistemaAmortizacao", "indexador",
                   "numeroCedula", "nomeDevedor", "cpfCnpjDevedor",
                   "finalidade", "garantias", "observacoes",
+                  "temCapitalizacaoMensal", "clausulaCapitalizacao",
+                  "indicioCapitalizacao", "taxaMensalContrato",
                 ],
                 additionalProperties: false,
               },

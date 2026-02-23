@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calculator, Info, AlertTriangle, Plus, Trash2, FileText } from "lucide-react";
+import { Calculator, Info, AlertTriangle, Plus, Trash2, FileText, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import UploadContratoPDF, { type DadosExtradosPDF } from "@/components/UploadContratoPDF";
 import { type DadosDEDDDC } from "@/components/UploadDEDDDC";
@@ -91,6 +91,13 @@ export default function Calculadora() {
   const [dedImportado, setDedImportado] = useState(false);
   const [dadosDED, setDadosDED] = useState<DadosDEDDDC | null>(null);
   const [mostrarChecklistDED, setMostrarChecklistDED] = useState(false);
+  // Estado de capitalização mensal detectada no PDF
+  const [capitalizacaoDetectada, setCapitalizacaoDetectada] = useState<{
+    tem: boolean;
+    clausula: string | null;
+    indicio: string | null;
+    taxaMensal: number | null;
+  } | null>(null);
 
   const { data: limites } = trpc.tcr.limitesLegais.useQuery();
   const { data: linhasCredito } = trpc.mcr.linhas.useQuery();
@@ -270,6 +277,22 @@ export default function Calculadora() {
       setTipoTaxaSelecionada("pos_fixada");
       setValue("tipoTaxa", "pos_fixada");
     }
+
+    // ── Capitalização mensal (anatocismo) ──
+    if (dados.temCapitalizacaoMensal != null) {
+      setCapitalizacaoDetectada({
+        tem: dados.temCapitalizacaoMensal === true,
+        clausula: dados.clausulaCapitalizacao ?? null,
+        indicio: dados.indicioCapitalizacao ?? null,
+        taxaMensal: dados.taxaMensalContrato ?? null,
+      });
+      if (dados.temCapitalizacaoMensal) {
+        toast.error(
+          "ATENÇÃO: Capitalização mensal de juros (anatocismo) detectada no contrato!",
+          { duration: 8000 }
+        );
+      }
+    }
   };
 
   return (
@@ -365,6 +388,103 @@ export default function Calculadora() {
                 <strong>Mora em % a.m. detectada automaticamente.</strong> O contrato expressa a mora em percentual ao mês.
                 O sistema selecionou a unidade <strong>% a.m.</strong> e exibe o equivalente anual ({taxaMoraEmAA.toFixed(4)}% a.a.) no campo abaixo.
                 O valor será convertido corretamente no cálculo.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* ── Alerta de Capitalização Mensal (Anatocismo) ── */}
+          {capitalizacaoDetectada?.tem && (
+            <div className="rounded-lg border-2 border-red-400 bg-red-50 p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-bold text-red-800">
+                    CAPITALIZAÇÃO MENSAL DE JUROS (ANATOCISMO) DETECTADA
+                  </p>
+                  <p className="text-xs text-red-700">
+                    A IA identificou indícios de capitalização mensal de juros neste contrato, prática vedada para crédito rural.
+                  </p>
+                </div>
+              </div>
+
+              {/* Tipo de indício */}
+              {capitalizacaoDetectada.indicio && (
+                <div className="rounded bg-red-100 px-3 py-2">
+                  <p className="text-xs font-semibold text-red-800 mb-0.5">Tipo de indício detectado:</p>
+                  <p className="text-xs text-red-700">
+                    {capitalizacaoDetectada.indicio === "taxa_composta" && "Taxa composta: a taxa anual não corresponde à simples multiplicação da taxa mensal por 12, indicando cálculo exponencial."}
+                    {capitalizacaoDetectada.indicio === "clausula_expressa" && "Cláusula expressa: o contrato menciona explicitamente capitalização mensal ou juros sobre juros."}
+                    {capitalizacaoDetectada.indicio === "sistema_price" && "Sistema Price com taxa mensal: o Sistema Price (Tabela Price) aplica capitalização composta por natureza matemática."}
+                    {capitalizacaoDetectada.indicio === "taxa_dupla" && "Taxa dupla: o contrato expressa simultaneamente a taxa mensal e anual com conversão composta."}
+                  </p>
+                </div>
+              )}
+
+              {/* Cláusula encontrada */}
+              {capitalizacaoDetectada.clausula && (
+                <div className="rounded bg-red-100 px-3 py-2">
+                  <p className="text-xs font-semibold text-red-800 mb-0.5">Cláusula identificada no contrato:</p>
+                  <p className="text-xs text-red-700 italic">“{capitalizacaoDetectada.clausula}”</p>
+                </div>
+              )}
+
+              {/* Fundamentação legal */}
+              <div className="rounded bg-red-100 px-3 py-2 space-y-1.5">
+                <p className="text-xs font-semibold text-red-800">Fundamentação legal:</p>
+                <ul className="space-y-1">
+                  <li className="text-xs text-red-700">
+                    <strong>Súmula 93/STJ:</strong> “A legislação sobre cédulas de crédito rural, comercial e industrial admite o pacto de capitalização de juros.” — <em>porém, a capitalização deve ser expressamente pactuada.</em>
+                  </li>
+                  <li className="text-xs text-red-700">
+                    <strong>DL 167/67, art. 5º:</strong> As cédulas de crédito rural podem estipular capitalização de juros, mas somente quando expressamente prevista e nos limites fixados pelo CMN.
+                  </li>
+                  <li className="text-xs text-red-700">
+                    <strong>Res. CMN 4.788/2020 e MCR 2-1:</strong> As taxas de juros do crédito rural são fixadas em percentual ao ano. A expressão de taxa mensal com capitalização composta não autorizada eleva o custo real acima do limite legal.
+                  </li>
+                  <li className="text-xs text-red-700">
+                    <strong>STJ, REsp 1.061.530/RS (repetitivo):</strong> É vedada a capitalização de juros em período inferior ao anual nos contratos de crédito rural, salvo expressão contratual e autorização normativa específica.
+                  </li>
+                  <li className="text-xs text-red-700">
+                    <strong>CDC, art. 51, IV:</strong> São nulas de pleno direito as cláusulas que estabeleçam obrigações consideráveis injuístas ou abusivas.
+                  </li>
+                </ul>
+              </div>
+
+              {/* Impacto financeiro estimado */}
+              {capitalizacaoDetectada.taxaMensal != null && (
+                <div className="rounded bg-red-100 px-3 py-2">
+                  <p className="text-xs font-semibold text-red-800 mb-0.5">Impacto da capitalização:</p>
+                  <p className="text-xs text-red-700">
+                    Taxa mensal de <strong>{capitalizacaoDetectada.taxaMensal}% a.m.</strong> com capitalização composta equivale a{" "}
+                    <strong>{((Math.pow(1 + capitalizacaoDetectada.taxaMensal / 100, 12) - 1) * 100).toFixed(4)}% a.a.</strong>{" "}
+                    (regime composto), contra{" "}
+                    <strong>{(capitalizacaoDetectada.taxaMensal * 12).toFixed(4)}% a.a.</strong>{" "}
+                    (regime simples/linear). A diferença representa o excesso cobrado por anatocismo.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-1">
+                <p className="text-xs text-red-600 font-medium">Recomenda-se incluir questão específica sobre anatocismo no laudo pericial.</p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs text-red-600 hover:text-red-800"
+                  onClick={() => setCapitalizacaoDetectada(null)}
+                >
+                  Dispensar
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Aviso quando não detectou capitalização */}
+          {capitalizacaoDetectada && !capitalizacaoDetectada.tem && (
+            <Alert className="border-green-300 bg-green-50">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-xs text-green-800">
+                <strong>Capitalização mensal não detectada.</strong> A IA não identificou indícios de anatocismo neste contrato. Isso não exclui a análise pericial manual.
               </AlertDescription>
             </Alert>
           )}
