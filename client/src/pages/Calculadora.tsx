@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -563,14 +562,14 @@ export default function Calculadora() {
                     const itens = linhasCredito.filter(l => l.grupo === grupo);
                     if (!itens.length) return null;
                     return (
-                      <>
-                        <div key={grupo} className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</div>
+                      <Fragment key={grupo}>
+                        <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</div>
                         {itens.map(l => (
                           <SelectItem key={l.id} value={l.id}>
                             {l.label} {l.taxaLimiteAA !== null ? `- max. ${l.taxaLimiteAA}% a.a.` : "- livre pactuacao"}
                           </SelectItem>
                         ))}
-                      </>
+                      </Fragment>
                     );
                   })}
                 </SelectContent>
