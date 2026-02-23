@@ -302,3 +302,16 @@
 - [ ] Frontend: exibir CET no resultado com comparativo vs. taxa nominal
 - [ ] Frontend: alerta jurídico automático para TAC/TEC abusivos (Súmula 566 STJ)
 - [ ] Frontend: alerta para IOF acima do limite legal (Lei 8.894/94)
+
+## Laudo Pericial Contábil — 8 Seções (Modelo Tribunal)
+- [x] Backend: endpoint tRPC tcr.gerarLaudoPericial com prompt estruturado em 8 seções
+- [x] Backend: suporte a quesitos das partes (Autor e Réu) personalizáveis
+- [x] Backend: citação automática de jurisprudência STJ com número de processo
+- [x] Backend: Colunas A (Banco) e B (MCR/Justiça) no laudo
+- [x] Frontend: componente ComparativoMCRCard com tabela Colunas A/B e laudo integrado
+- [x] Frontend: página /app/laudo-pericial com formulário completo (perito, processo, contrato, quesitos)
+- [x] Frontend: pré-visualização do comparativo MCR em tempo real no formulário
+- [x] Frontend: quesitos padrão editáveis por parte (Autor e Réu)
+- [x] Frontend: impressão/PDF do laudo gerado
+- [x] App.tsx: rota /app/laudo-pericial registrada
+- [x] DashboardLayout: item "Laudo Pericial" no menu lateral

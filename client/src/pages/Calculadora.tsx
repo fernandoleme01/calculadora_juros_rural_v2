@@ -66,8 +66,10 @@ export default function Calculadora() {
   const [pdfExtraido, setPdfExtraido] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [mostrarParcelas, setMostrarParcelas] = useState(false);
+  const [linhaSelecionada, setLinhaSelecionada] = useState<string>("");
 
   const { data: limites } = trpc.tcr.limitesLegais.useQuery();
+  const { data: linhasCredito } = trpc.mcr.linhas.useQuery();
 
   const calcularMutation = trpc.tcr.calcular.useMutation({
     onSuccess: (data) => {
@@ -102,6 +104,13 @@ export default function Calculadora() {
 
   const taxaRem = watch("taxaJurosRemuneratorios");
   const taxaMora = watch("taxaJurosMora");
+  const taxaRemAtual = taxaRem;
+  const valorPrincipalAtual = watch("valorPrincipal");
+  const prazoMesesAtual = watch("prazoMeses");
+  const { data: comparativoMCR } = trpc.mcr.comparativo.useQuery(
+    { taxaContratadaAA: taxaRemAtual || 0, linhaId: linhaSelecionada, valorPrincipal: valorPrincipalAtual, prazoMeses: prazoMesesAtual },
+    { enabled: !!linhaSelecionada && !!taxaRemAtual && taxaRemAtual > 0 }
+  );
 
   const adicionarIpca = () => {
     const val = parseFloat(novoIpca);
@@ -246,6 +255,37 @@ export default function Calculadora() {
                   <SelectItem value="custeio">Custeio Agrícola / Pecuário</SelectItem>
                   <SelectItem value="investimento">Investimento Rural</SelectItem>
                   <SelectItem value="comercializacao">Comercialização</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Linha de Crédito (MCR) — Comparativo automático</Label>
+              <Select value={linhaSelecionada} onValueChange={setLinhaSelecionada}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione para confronto com norma MCR" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Não informar</SelectItem>
+                  {linhasCredito && [
+                    { grupo: "pronaf", label: "Pronaf" },
+                    { grupo: "pronamp", label: "Pronamp" },
+                    { grupo: "moderacao", label: "Programas Federais" },
+                    { grupo: "fundos", label: "Fundos Constitucionais" },
+                    { grupo: "livre", label: "Recursos Livres" },
+                  ].map(({ grupo, label }) => {
+                    const itens = linhasCredito.filter(l => l.grupo === grupo);
+                    if (!itens.length) return null;
+                    return (
+                      <>
+                        <div key={grupo} className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</div>
+                        {itens.map(l => (
+                          <SelectItem key={l.id} value={l.id}>
+                            {l.label} {l.taxaLimiteAA !== null ? `- max. ${l.taxaLimiteAA}% a.a.` : "- livre pactuacao"}
+                          </SelectItem>
+                        ))}
+                      </>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

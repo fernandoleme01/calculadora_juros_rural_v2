@@ -57,6 +57,10 @@ import {
   type TipoContrato,
 } from "./analiseCadeia";
 import {
+  LINHAS_CREDITO,
+  calcularComparativoMCR,
+} from "./limitesLegais";
+import {
   criarCadeiaContratos,
   listarCadeiasPorUsuario,
   buscarCadeiaComContratos,
@@ -338,6 +342,120 @@ Fundamente o parecer na Lei nº 4.829/65, Decreto-Lei nº 167/67, Decreto nº 22
 
         return {
           parecer: response.choices[0]?.message?.content ?? "Não foi possível gerar o parecer.",
+        };
+      }),
+
+    // Laudo Pericial Contábil completo — 8 seções (modelo tribunal)
+    gerarLaudoPericial: publicProcedure
+      .input(z.object({
+        nomeDevedor: z.string().default(""),
+        numeroCedula: z.string().default(""),
+        nomeBanco: z.string().default(""),
+        linhaCredito: z.string(),
+        taxaContratadaAA: z.number(),
+        taxaLimiteAA: z.number().nullable(),
+        diferencaPP: z.number().nullable(),
+        excede: z.boolean(),
+        excessoJurosTotal: z.number().nullable(),
+        fundamentacao: z.string(),
+        valorPrincipal: z.number(),
+        prazoMeses: z.number().int(),
+        saldoDevedorBanco: z.number().nullable(),
+        totalDevidoRevisado: z.number().nullable(),
+        textoVeredicto: z.string(),
+        // Dados opcionais do perito
+        nomePerito: z.string().default("[Nome do Perito]"),
+        crcPerito: z.string().default("___"),
+        numeroProcesso: z.string().default("___"),
+        comarca: z.string().default("___"),
+        // Quesitos das partes
+        quesitosAutor: z.array(z.string()).default([]),
+        quesitosReu: z.array(z.string()).default([]),
+      }))
+      .mutation(async ({ input }) => {
+        const fmtBRL = (v: number | null) =>
+          v != null ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "N/A";
+
+        const qAutorTexto = input.quesitosAutor.length
+          ? input.quesitosAutor.map((q, i) => `Quesito ${i + 1} (Autor): ${q}`).join("\n")
+          : "Quesito 1 (Autor): A taxa de juros aplicada excedeu o limite legal para a linha de credito contratada?\nQuesito 2 (Autor): Houve capitalizacao de juros vedada pelo DL 167/67?\nQuesito 3 (Autor): Qual o valor pago a maior pelo produtor rural?";
+
+        const qReuTexto = input.quesitosReu.length
+          ? input.quesitosReu.map((q, i) => `Quesito ${i + 1} (Reu/Banco): ${q}`).join("\n")
+          : "Quesito 1 (Reu/Banco): O contrato previa taxa de juros dentro dos limites legais?\nQuesito 2 (Reu/Banco): Os encargos cobrados estao de acordo com o MCR?";
+
+        const prompt = `Voce e um perito contabil especialista em credito rural. Elabore um Laudo Pericial Contabil completo e formal, estruturado em exatamente 8 secoes romanas, com linguagem tecnica e juridica de tribunal.
+
+Dados do processo:
+- Processo n.: ${input.numeroProcesso}
+- Comarca: ${input.comarca}
+- Perito: ${input.nomePerito} — CRC/CORECON: ${input.crcPerito}
+- Devedor/Autor: ${input.nomeDevedor || "[Nome do Produtor Rural]"}
+- Banco/Reu: ${input.nomeBanco || "[Instituicao Financeira]"}
+- Contrato n.: ${input.numeroCedula || "___"}
+- Linha de Credito: ${input.linhaCredito}
+- Taxa Contratada: ${input.taxaContratadaAA.toFixed(2)}% a.a.
+- Taxa-Limite MCR: ${input.taxaLimiteAA != null ? input.taxaLimiteAA.toFixed(2) + "% a.a." : "Livre pactuacao"}
+- Excesso de Juros: ${input.excede ? `${input.diferencaPP?.toFixed(2)} p.p. acima do limite legal` : "Nao identificado"}
+- Excesso Total em R$: ${fmtBRL(input.excessoJurosTotal)}
+- Valor Principal: ${fmtBRL(input.valorPrincipal)}
+- Prazo: ${input.prazoMeses} meses
+- Saldo Devedor conforme Banco: ${fmtBRL(input.saldoDevedorBanco)}
+- Total Devido (revisado MCR): ${fmtBRL(input.totalDevidoRevisado)}
+- Veredicto: ${input.textoVeredicto}
+- Base normativa: ${input.fundamentacao}
+
+Quesitos do Autor:
+${qAutorTexto}
+
+Quesitos do Reu/Banco:
+${qReuTexto}
+
+Estruture o laudo com EXATAMENTE estas 8 secoes:
+
+I - INTRODUCAO
+Apresentacao do perito, nomeacao nos autos, objeto do laudo.
+
+II - OBJETO E FINALIDADE DA PERICIA
+Descreva o que a pericia visa analisar: evolucao do debito, legalidade dos juros, capitalizacao, taxas e encargos, direito a prorrogacao/renegociacao.
+
+III - SINTESE DA CONTROVERSIA
+Resuma as alegacoes do Autor (abusividade das taxas, excesso sobre o MCR, comissao de permanencia cumulada) e do Reu (regularidade contratual).
+
+IV - METODOLOGIA ADOTADA
+Descreva o metodo de recalculo contratual: expurgo de juros acima do limite legal, verificacao de capitalizacao vedada, reajuste conforme MCR, planilha eletronica.
+
+V - ANALISE PERICIAL E PLANILHAS
+Apresente:
+- Analise das Clausulas: taxa pactuada e encargos de mora
+- Coluna A: Evolucao conforme Banco (com os valores acima)
+- Coluna B: Evolucao conforme Limites MCR/Justica (com os valores revisados)
+- Diferenca: valor pago a maior ou saldo devedor ajustado
+Cite jurisprudencia do STJ com numero de processo (ex: STJ REsp 1.061.530/RS, REsp 1.370.585/RS, REsp 1.509.057/RS).
+
+VI - RESPOSTA AOS QUESITOS
+Responda cada quesito do Autor e do Reu com fundamentacao legal e jurisprudencia (cite ementa completa + tribunal + relator + data + camara, conforme padrao STJ).
+
+VII - CONCLUSAO
+Informe o saldo devedor revisado, o valor pago a maior, e a conclusao tecnica sobre a conformidade do contrato com a legislacao.
+
+VIII - ENCERRAMENTO
+Local, data, assinatura e identificacao do perito (nome e CRC).
+
+Seja formal, preciso e use linguagem de laudo judicial. Cite pelo menos 3 jurisprudencias reais do STJ com numero de processo completo.`;
+
+        const response = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: "Voce e um perito contabil especialista em credito rural, com profundo conhecimento da Lei 4.829/65, DL 167/67, Lei de Usura (Dec. 22.626/33), Manual de Credito Rural (MCR), Resolucoes CMN e jurisprudencia do STJ. Elabore laudos periciais formais, precisos e fundamentados em legislacao e jurisprudencia reais.",
+            },
+            { role: "user", content: prompt },
+          ],
+        });
+
+        return {
+          laudo: response.choices[0]?.message?.content ?? "Nao foi possivel gerar o laudo pericial.",
         };
       }),
   }),
@@ -843,6 +961,30 @@ Fundamente o parecer na Lei nº 4.829/65, Decreto-Lei nº 167/67, Decreto nº 22
         });
         await salvarLaudoCadeia(input.id, laudo);
         return { laudo, analise };
+      }),
+  }),
+
+  // ─── MCR — Linhas de Crédito e Comparativo de Taxas ───────────────────────────────
+  mcr: router({
+
+    // Lista todas as linhas de crédito rural com taxas-limite do MCR
+    linhas: publicProcedure.query(() => LINHAS_CREDITO),
+
+    // Calcula comparativo: taxa contratada vs. taxa-limite da linha selecionada
+    comparativo: publicProcedure
+      .input(z.object({
+        taxaContratadaAA: z.number().positive(),
+        linhaId: z.string(),
+        valorPrincipal: z.number().positive().optional(),
+        prazoMeses: z.number().int().positive().optional(),
+      }))
+      .query(({ input }) => {
+        return calcularComparativoMCR({
+          taxaContratadaAA: input.taxaContratadaAA,
+          linhaId: input.linhaId,
+          valorPrincipal: input.valorPrincipal,
+          prazoMeses: input.prazoMeses,
+        });
       }),
   }),
 

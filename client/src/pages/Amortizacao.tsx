@@ -24,6 +24,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { fmtBRL, fmtPctFrac } from "@/lib/formatters";
 
 // ─── Schema de Validação ─────────────────────────────────────────────────────
 
@@ -40,15 +41,8 @@ type FormData = z.infer<typeof schema>;
 
 // ─── Helpers de Formatação ───────────────────────────────────────────────────
 
-const fmtR = (n: unknown) => {
-  const num = typeof n === 'string' ? parseFloat(n) : Number(n);
-  return (isFinite(num) ? num : 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-};
-
-const fmtP = (n: unknown, d = 4) => {
-  const num = typeof n === 'string' ? parseFloat(n) : Number(n);
-  return `${((isFinite(num) ? num : 0) * 100).toFixed(d)}%`;
-};
+const fmtR = fmtBRL;
+const fmtP = (n: unknown, d = 4) => fmtPctFrac(n, d);
 
 // ─── Componente Principal ────────────────────────────────────────────────────
 

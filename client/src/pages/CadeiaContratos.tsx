@@ -42,13 +42,11 @@ import {
   CheckCheck,
 } from "lucide-react";
 import UploadContratoPDF, { type DadosExtradosPDF } from "@/components/UploadContratoPDF";
+import { fmtBRL, fmtFixed } from "@/lib/formatters";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const fmtR = (n: number | string | null | undefined) => {
-  const num = typeof n === 'string' ? parseFloat(n) : Number(n);
-  return (isFinite(num) ? num : 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-};
+const fmtR = fmtBRL;
 
 const TIPO_LABELS: Record<string, { label: string; cor: string }> = {
   original: { label: "Contrato Original", cor: "bg-blue-100 text-blue-800 border-blue-200" },
@@ -463,7 +461,7 @@ export default function CadeiaContratos() {
                                         <div>
                                           <span className="text-muted-foreground">Taxa:</span>{" "}
                                           <span className={`font-medium ${parseFloat(c.taxaJurosAnual) > 12 ? "text-destructive" : "text-green-600"}`}>
-                                            {(isNaN(parseFloat(c.taxaJurosAnual)) ? 0 : parseFloat(c.taxaJurosAnual)).toFixed(2)}% a.a.
+                                            {fmtFixed(c.taxaJurosAnual, 2)}% a.a.
                                           </span>
                                         </div>
                                         <div>
@@ -540,7 +538,7 @@ export default function CadeiaContratos() {
                           <CardContent className="pt-4 pb-3">
                             <p className="text-xs text-muted-foreground">Crescimento</p>
                             <p className={`text-base font-bold ${analise.incrementoTotal > 0 ? "text-destructive" : "text-green-600"}`}>
-                              {Number(analise.percentualIncremento || 0).toFixed(1)}%
+                              {fmtFixed(analise.percentualIncremento, 1)}%
                             </p>
                             <p className="text-xs text-muted-foreground">{fmtR(analise.incrementoTotal)}</p>
                           </CardContent>

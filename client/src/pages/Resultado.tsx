@@ -12,6 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { getResultadoTemp, getInputTemp } from "./Calculadora";
 import { Streamdown } from "streamdown";
+import { toNum, fmtBRL, fmtPct, fmtFixed } from "@/lib/formatters";
+import ComparativoMCRCard from "@/components/ComparativoMCRCard";
 
 type ConformidadeStatus = "conforme" | "nao_conforme" | "atencao";
 
@@ -33,19 +35,9 @@ function StatusBadge({ status }: { status: ConformidadeStatus }) {
   );
 }
 
-function toNum(value: unknown): number {
-  if (value === null || value === undefined) return 0;
-  const n = typeof value === "string" ? parseFloat(value) : Number(value);
-  return isFinite(n) ? n : 0;
-}
-
-function formatBRL(value: unknown) {
-  return toNum(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatPct(value: unknown, decimals = 4) {
-  return `${toNum(value).toFixed(decimals)}%`;
-}
+// Aliases locais para compatibilidade com o código existente neste arquivo
+const formatBRL = fmtBRL;
+const formatPct = fmtPct;
 
 export default function Resultado() {
   const [, setLocation] = useLocation();
@@ -215,14 +207,14 @@ export default function Resultado() {
             {resultado.fam && (
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">FAM (Fator de Atualização)</p>
-                <p className="text-lg font-bold">{toNum(resultado.fam).toFixed(6)}</p>
-                <p className="text-xs text-muted-foreground">IPCA: {toNum(resultado.ipcaAcumulado).toFixed(4)}%</p>
+                <p className="text-lg font-bold">{fmtFixed(resultado.fam, 6)}</p>
+                <p className="text-xs text-muted-foreground">IPCA: {fmtPct(resultado.ipcaAcumulado, 4)}</p>
               </div>
             )}
             {resultado.fii && (
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">FII (Inflação Implícita)</p>
-                <p className="text-lg font-bold">{toNum(resultado.fii).toFixed(7)}</p>
+                <p className="text-lg font-bold">{fmtFixed(resultado.fii, 7)}</p>
               </div>
             )}
             <div className="space-y-1">
@@ -307,7 +299,7 @@ export default function Resultado() {
                 <p className={`text-xs ${
                   resultado.analiseParcelas.excessoPago > 0 ? 'text-red-600' : 'text-emerald-600'
                 }`}>
-                  {toNum(resultado.analiseParcelas.percentualExcesso).toFixed(2)}% acima do legal
+                  {fmtFixed(resultado.analiseParcelas.percentualExcesso, 2)}% acima do legal
                 </p>
               </div>
               <div className={`p-3 rounded-lg border space-y-1 ${
@@ -494,6 +486,18 @@ export default function Resultado() {
             </Accordion>
           </CardContent>
         </Card>
+      )}
+
+      {/* Confronto com Norma MCR (PeríciaCR) */}
+      {inputData?.linhaSelecionada && (
+        <ComparativoMCRCard
+          taxaContratadaAA={inputData.taxaJurosRemuneratorios}
+          linhaId={inputData.linhaSelecionada}
+          valorPrincipal={inputData.valorPrincipal}
+          prazoMeses={inputData.prazoMeses}
+          saldoDevedorAtualizado={resultado.saldoDevedorAtualizado}
+          totalDevido={resultado.totalDevido}
+        />
       )}
 
       {/* Parecer Técnico-Jurídico via IA */}

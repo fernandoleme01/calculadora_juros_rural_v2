@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, RefreshCw, TrendingUp, TrendingDown, DollarSign, BarChart3, Landmark, AlertCircle, Percent, Calculator, CheckCircle2, XCircle } from "lucide-react";
 import { useState, useMemo } from "react";
+import { toNum, fmtBRL, fmtPct, fmtBRLNum, fmtFixed } from "@/lib/formatters";
 
 export default function DadosBCB() {
   const [refetchKey, setRefetchKey] = useState(0);
@@ -172,17 +173,12 @@ export default function DadosBCB() {
       }>;
   }, [indexadores, calcValor, calcMeses, calcIndexador]);
 
-  const formatPct = (v?: number | string | null) => {
-    if (v == null) return "N/D";
-    const n = typeof v === "string" ? parseFloat(v) : v;
-    if (isNaN(n)) return "N/D";
-    return `${n.toFixed(4)}%`;
-  };
+  // Formatadores locais usando o módulo centralizado
+  const formatPct = (v?: number | string | null) =>
+    v == null ? "N/D" : fmtPct(v, 4);
 
-  const formatBRL = (v?: number | null) => {
-    if (v == null) return "N/D";
-    return v.toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
-  };
+  const formatBRL = (v?: number | null) =>
+    v == null ? "N/D" : fmtBRLNum(v, 4);
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
@@ -228,7 +224,7 @@ export default function DadosBCB() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-primary">
-                  {data.selic.anualizada != null ? `${(typeof data.selic.anualizada === 'string' ? parseFloat(data.selic.anualizada) : Number(data.selic.anualizada)).toFixed(2)}%` : "N/D"}
+                  {data.selic.anualizada != null ? fmtPct(data.selic.anualizada, 2) : "N/D"}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">ao ano (anualizada)</p>
                 {data.selic.diaria.length > 0 && (
@@ -501,20 +497,20 @@ export default function DadosBCB() {
                                   <p className="text-xs text-muted-foreground">{res.descricao}</p>
                                 </td>
                                 <td className={`py-2.5 px-3 text-right font-mono font-semibold ${res.cor}`}>
-                                  {(typeof res.taxaEfetiva === 'string' ? parseFloat(res.taxaEfetiva) : Number(res.taxaEfetiva || 0)).toFixed(2)}% a.a.
+                                  {fmtFixed(res.taxaEfetiva, 2)}% a.a.
                                 </td>
                                 <td className="py-2.5 px-3 text-right font-mono">
-                                  R$ {Number(res.valorFinal || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  R$ {fmtBRLNum(res.valorFinal, 2)}
                                 </td>
                                 <td className="py-2.5 px-3 text-right font-mono">
-                                  R$ {Number(res.jurosTotal || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  R$ {fmtBRLNum(res.jurosTotal, 2)}
                                 </td>
                                 <td className={`py-2.5 px-3 text-right font-mono font-semibold ${
                                   res.excesso > 0 ? "text-red-600" : "text-green-600"
                                 }`}>
                                   {res.excesso > 0
-                                    ? `+ R$ ${Number(res.excesso || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                    : res.id === "limite_legal" ? "—" : `- R$ ${Math.abs(Number(res.excesso || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                    ? `+ R$ ${fmtBRLNum(res.excesso, 2)}`
+                                    : res.id === "limite_legal" ? "—" : `- R$ ${fmtBRLNum(Math.abs(toNum(res.excesso)), 2)}`
                                   }
                                 </td>
                                 <td className="py-2.5 px-3 text-center">

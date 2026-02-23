@@ -313,6 +313,128 @@ export function getFundamentacaoLimite(modalidade: ModalidadeCredito): string {
   return `Para a modalidade "${limite.fundamentacao.descricao}", o ${limite.fundamentacao.mcrSecao} (${limite.fundamentacao.resolucao}, ${limite.fundamentacao.atualizacaoMCR}) estabelece taxa efetiva de juros de até ${taxa.toFixed(1)}% a.a. como encargo financeiro máximo.${limite.observacoes ? " " + limite.observacoes : ""}`;
 }
 
+// ─── Tabela LINHAS (PeríciaCR) ───────────────────────────────────────────────
+/**
+ * Tabela de linhas de crédito rural com taxas-limite do MCR, no formato
+ * compatível com o comparativo automático (inspirado no PeríciaCR).
+ * Inclui programas federais, fundos constitucionais e recursos livres.
+ */
+export interface LinhaCredito {
+  id: string;
+  label: string;
+  grupo: "pronaf" | "pronamp" | "moderacao" | "fundos" | "livre";
+  taxaLimiteAA: number | null;   // % a.a. — null = livre pactuação
+  fundamentacao: string;          // Referência MCR/Resolução
+  observacoes?: string;
+}
+
+export const LINHAS_CREDITO: LinhaCredito[] = [
+  // ── Pronaf ──────────────────────────────────────────────────────────────────
+  { id: "pronaf_b",           label: "Pronaf – Grupo B (Microcrédito)",          grupo: "pronaf",    taxaLimiteAA: 0.5,  fundamentacao: "MCR 7-6, item 13; Res. CMN 5.099" },
+  { id: "pronaf_a",           label: "Pronaf – Grupo A (Assentados)",            grupo: "pronaf",    taxaLimiteAA: 1.5,  fundamentacao: "MCR 7-6, item 1; Res. CMN 5.099" },
+  { id: "pronaf_custeio",     label: "Pronaf – Custeio (Grupos C/D/E/V)",        grupo: "pronaf",    taxaLimiteAA: 5.0,  fundamentacao: "MCR 7-6, item 4; Res. CMN 5.099" },
+  { id: "pronaf_agroecologia",label: "Pronaf – Agroecologia / Floresta / Semiárido", grupo: "pronaf", taxaLimiteAA: 3.0, fundamentacao: "MCR 7-6, itens 7, 8 e 14; Res. CMN 5.099" },
+  { id: "pronaf_investimento",label: "Pronaf – Investimento (Mais Alimentos)",   grupo: "pronaf",    taxaLimiteAA: 5.0,  fundamentacao: "MCR 7-6, item 5; Res. CMN 5.099" },
+  { id: "pronaf_mulher",      label: "Pronaf – Mulher",                           grupo: "pronaf",    taxaLimiteAA: 5.0,  fundamentacao: "MCR 7-6, item 6; Res. CMN 5.099" },
+  { id: "pronaf_jovem",       label: "Pronaf – Jovem Rural",                      grupo: "pronaf",    taxaLimiteAA: 5.0,  fundamentacao: "MCR 7-6, item 10; Res. CMN 5.099" },
+  // ── Pronamp ─────────────────────────────────────────────────────────────────
+  { id: "pronamp_custeio",    label: "Pronamp – Custeio (Médio Produtor)",       grupo: "pronamp",   taxaLimiteAA: 8.0,  fundamentacao: "MCR 7-4, Tabela 1, item 1.1-1; Res. CMN 5.234" },
+  { id: "pronamp_investimento",label: "Pronamp – Investimento (Médio Produtor)", grupo: "pronamp",   taxaLimiteAA: 8.5,  fundamentacao: "MCR 7-4, Tabela 1, item 1.1-2; Res. CMN 5.234" },
+  // ── Moderação / Programas federais ──────────────────────────────────────────
+  { id: "moderfrota",         label: "Moderfrota (máquinas e equipamentos)",     grupo: "moderacao", taxaLimiteAA: 9.5,  fundamentacao: "MCR 7-1, Tabela 1; Res. CMN 5.234" },
+  { id: "moderagro",          label: "Moderagro (defesa agropecuária)",           grupo: "moderacao", taxaLimiteAA: 9.75, fundamentacao: "MCR 7-1, Tabela 1; Res. CMN 5.234" },
+  { id: "inovagro",           label: "Inovagro (inovação tecnológica)",           grupo: "moderacao", taxaLimiteAA: 8.0,  fundamentacao: "MCR 7-1, Tabela 1; Res. CMN 5.234" },
+  { id: "pca",                label: "PCA – Construção / Reforma",                grupo: "moderacao", taxaLimiteAA: 8.0,  fundamentacao: "MCR 7-1, Tabela 1; Res. CMN 5.234" },
+  { id: "custeio_obrigatorio",label: "Custeio – Recursos Obrigatórios",          grupo: "moderacao", taxaLimiteAA: 14.0, fundamentacao: "MCR 7-1, Tabela 1, item 1.1-1; Res. CMN 5.234" },
+  { id: "investimento_subvencionado", label: "Investimento – Subvencionado (equalização)", grupo: "moderacao", taxaLimiteAA: 12.5, fundamentacao: "MCR 7-1, Tabela 1, item 1.1-2; Res. CMN 5.234" },
+  // ── Fundos Constitucionais ───────────────────────────────────────────────────
+  { id: "fco",                label: "FCO Rural (Centro-Oeste)",                  grupo: "fundos",    taxaLimiteAA: 7.0,  fundamentacao: "Lei 7.827/1989; Res. CMN 5.234" },
+  { id: "fne",                label: "FNE Rural (Nordeste)",                      grupo: "fundos",    taxaLimiteAA: 7.0,  fundamentacao: "Lei 7.827/1989; Res. CMN 5.234" },
+  { id: "fno",                label: "FNO Rural (Norte)",                         grupo: "fundos",    taxaLimiteAA: 7.0,  fundamentacao: "Lei 7.827/1989; Res. CMN 5.234" },
+  // ── Recursos Livres ──────────────────────────────────────────────────────────
+  { id: "livre",              label: "Recursos Livres (livre pactuação)",         grupo: "livre",     taxaLimiteAA: null, fundamentacao: "MCR 7-1, Tabela 1, item 1.1-4; Res. CMN 5.234", observacoes: "STJ aplica 12% a.a. como parâmetro de abusividade (REsp 1.061.530/RS)" },
+];
+
+/**
+ * Retorna uma linha de crédito pelo ID.
+ */
+export function getLinhaCreditoPorId(id: string): LinhaCredito | undefined {
+  return LINHAS_CREDITO.find(l => l.id === id);
+}
+
+/**
+ * Calcula o comparativo de taxas: taxa contratada vs. taxa-limite da linha.
+ * Retorna o veredicto pericial e o excesso de juros em R$ (se informado o principal e prazo).
+ */
+export function calcularComparativoMCR(params: {
+  taxaContratadaAA: number;
+  linhaId: string;
+  valorPrincipal?: number;
+  prazoMeses?: number;
+  sistema?: "price" | "sac";
+}): {
+  linha: LinhaCredito | null;
+  taxaLimite: number | null;
+  taxaContratada: number;
+  diferencaPP: number | null;     // Diferença em pontos percentuais
+  excede: boolean;
+  excessoJurosTotal: number | null; // Excesso de juros em R$ (se principal e prazo informados)
+  veredicto: "regular" | "excesso" | "livre_pactuacao";
+  textoVeredicto: string;
+  fundamentacao: string;
+} {
+  const linha = getLinhaCreditoPorId(params.linhaId);
+  if (!linha) {
+    return {
+      linha: null, taxaLimite: null, taxaContratada: params.taxaContratadaAA,
+      diferencaPP: null, excede: false, excessoJurosTotal: null,
+      veredicto: "livre_pactuacao",
+      textoVeredicto: "Linha de crédito não identificada.",
+      fundamentacao: "",
+    };
+  }
+
+  const taxaLimiteEfetiva = linha.taxaLimiteAA ?? TAXA_REVISAO_JUDICIAL;
+  const ehLivre = linha.taxaLimiteAA === null;
+  const diferenca = params.taxaContratadaAA - taxaLimiteEfetiva;
+  const excede = diferenca > 0;
+
+  // Calcular excesso de juros em R$ (Price simplificado)
+  let excessoJurosTotal: number | null = null;
+  if (params.valorPrincipal && params.prazoMeses && params.prazoMeses > 0) {
+    const calcJurosTotal = (taxa: number) => {
+      const im = Math.pow(1 + taxa / 100, 1 / 12) - 1;
+      if (im === 0) return 0;
+      const pmt = (params.valorPrincipal! * im * Math.pow(1 + im, params.prazoMeses!)) /
+                  (Math.pow(1 + im, params.prazoMeses!) - 1);
+      return pmt * params.prazoMeses! - params.valorPrincipal!;
+    };
+    const jurosContratado = calcJurosTotal(params.taxaContratadaAA);
+    const jurosLimite = calcJurosTotal(taxaLimiteEfetiva);
+    excessoJurosTotal = excede ? Math.max(0, jurosContratado - jurosLimite) : 0;
+  }
+
+  const veredicto = ehLivre ? "livre_pactuacao" : excede ? "excesso" : "regular";
+
+  const textoVeredicto = !excede
+    ? `A taxa contratada de ${params.taxaContratadaAA.toFixed(2)}% a.a. está dentro do limite de ${taxaLimiteEfetiva.toFixed(2)}% a.a. estabelecido para a linha ${linha.label} (${linha.fundamentacao}).`
+    : ehLivre
+    ? `A taxa contratada de ${params.taxaContratadaAA.toFixed(2)}% a.a. excede em ${diferenca.toFixed(2)} p.p. o limite de ${taxaLimiteEfetiva.toFixed(2)}% a.a. aplicado pelo STJ como parâmetro de abusividade para recursos livres (REsp 1.061.530/RS — recurso repetitivo).`
+    : `A taxa contratada de ${params.taxaContratadaAA.toFixed(2)}% a.a. excede em ${diferenca.toFixed(2)} p.p. o limite legal de ${taxaLimiteEfetiva.toFixed(2)}% a.a. estabelecido para a linha ${linha.label} (${linha.fundamentacao}). A cobrança acima deste limite é ilegal e passível de revisão judicial com devolução em dobro (art. 42, parágrafo único, CDC).`;
+
+  return {
+    linha,
+    taxaLimite: taxaLimiteEfetiva,
+    taxaContratada: params.taxaContratadaAA,
+    diferencaPP: diferenca,
+    excede,
+    excessoJurosTotal,
+    veredicto,
+    textoVeredicto,
+    fundamentacao: linha.fundamentacao,
+  };
+}
+
 /**
  * Lista todas as modalidades disponíveis com suas taxas máximas,
  * para uso em seletores de formulário.

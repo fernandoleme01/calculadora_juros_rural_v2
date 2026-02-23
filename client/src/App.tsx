@@ -18,6 +18,7 @@ import Assinatura from "./pages/Assinatura";
 import PerfilProfissional from "./pages/PerfilProfissional";
 import Amortizacao from "./pages/Amortizacao";
 import CadeiaContratos from "./pages/CadeiaContratos";
+import LaudoPericial from "./pages/LaudoPericial";
 import DashboardLayout from "./components/DashboardLayout";
 
 // Rotas públicas (sem autenticação, sem DashboardLayout)
@@ -48,6 +49,7 @@ function DashboardRoutes() {
         <Route path="/app/perfil" component={PerfilProfissional} />
         <Route path="/app/amortizacao" component={Amortizacao} />
         <Route path="/app/cadeia-contratos" component={CadeiaContratos} />
+        <Route path="/app/laudo-pericial" component={LaudoPericial} />
         <Route component={NotFound} />
       </Switch>
     </DashboardLayout>

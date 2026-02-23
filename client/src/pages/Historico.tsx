@@ -8,6 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Calculator, Trash2, CheckCircle, AlertTriangle, XCircle, History } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { fmtBRL, fmtDate } from "@/lib/formatters";
 
 function ConformeBadge({ status }: { status: string | null }) {
   if (status === "sim") return (
@@ -27,17 +28,8 @@ function ConformeBadge({ status }: { status: string | null }) {
   );
 }
 
-function formatBRL(value: string | null) {
-  if (!value) return "—";
-  const num = parseFloat(value);
-  if (isNaN(num)) return "—";
-  return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatDate(date: Date | null) {
-  if (!date) return "—";
-  return new Date(date).toLocaleDateString("pt-BR");
-}
+const formatBRL = fmtBRL;
+const formatDate = fmtDate;
 
 const modalidadeLabel: Record<string, string> = {
   custeio: "Custeio",

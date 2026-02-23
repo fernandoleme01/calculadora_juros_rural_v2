@@ -34,6 +34,7 @@ const menuItems = [
   { icon: Link2, label: "Cadeia de Contratos", path: "/app/cadeia-contratos" },
   { icon: FileSearch, label: "Analisar Contrato PDF", path: "/app/analisar-contrato" },
   { icon: Gavel, label: "Gerar Petição / Laudo", path: "/app/gerador-peticao" },
+  { icon: Scale, label: "Laudo Pericial", path: "/app/laudo-pericial" },
   { icon: Landmark, label: "Dados do BCB", path: "/app/dados-bcb" },
   { icon: History, label: "Histórico", path: "/app/historico" },
   { icon: BookOpen, label: "Fundamentação Legal", path: "/app/fundamentacao" },
