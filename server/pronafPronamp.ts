@@ -512,6 +512,10 @@ export function calcularComparativoPronaf(dados: DadosAnalise): ResultadoCompara
     excede,
     percentualExcesso,
     excessoJurosEstimadoR,
+    temBonusAdimplencia,
+    percentualBonus,
+    taxaEfetivaComBonusAA,
+    economiaBonusR,
   });
 
   return {
@@ -639,8 +643,16 @@ function gerarTextoLaudoPronaf(params: {
   excede: boolean;
   percentualExcesso: number;
   excessoJurosEstimadoR?: number;
+  temBonusAdimplencia: boolean;
+  percentualBonus: number;
+  taxaEfetivaComBonusAA?: number;
+  economiaBonusR?: number;
 }): string {
-  const { grupoInfo, dados, taxaLimite, diferenca, excede, percentualExcesso, excessoJurosEstimadoR } = params;
+  const {
+    grupoInfo, dados, taxaLimite, diferenca, excede, percentualExcesso,
+    excessoJurosEstimadoR, temBonusAdimplencia, percentualBonus,
+    taxaEfetivaComBonusAA, economiaBonusR,
+  } = params;
 
   return `
 ANÁLISE DE CONFORMIDADE — PRONAF
@@ -671,11 +683,32 @@ ${excede
   : `A taxa contratada de ${dados.taxaContratadaAA.toFixed(2)}% a.a. está DENTRO do limite legal de ${taxaLimite.toFixed(2)}% a.a. para o ${grupoInfo.nome}. Não foram identificados encargos financeiros abusivos neste contrato.`
 }
 
+BÔNUS DE ADIMPLÊNCIA:
+${temBonusAdimplencia ? `O ${grupoInfo.nome} é contemplado com bônus de adimplência de ${percentualBonus}% sobre os encargos financeiros, nos termos do ${grupoInfo.fundamentacaoMCR}, Tabela 1 (${grupoInfo.resolucao}). O benefício é concedido ao mutuário que se encontrar em dia com todas as obrigações perante a instituição financeira na data do vencimento de cada parcela, reduzindo o custo efetivo do crédito.
+
+Comparação das taxas:
+  Taxa limite legal (sem bônus): ${taxaLimite.toFixed(4)}% a.a.
+  Taxa efetiva com bônus de ${percentualBonus}%: ${taxaEfetivaComBonusAA !== undefined ? taxaEfetivaComBonusAA.toFixed(4) : (taxaLimite * (1 - percentualBonus / 100)).toFixed(4)}% a.a.
+  Redução proporcionada pelo bônus: ${(taxaLimite * percentualBonus / 100).toFixed(4)} pontos percentuais
+${economiaBonusR !== undefined && economiaBonusR > 0 ? `
+Economia estimada com o bônus de adimplência:
+  Calculada pelo Sistema Price sobre o prazo e valor informados, a diferença entre os juros totais sem o bônus e com o bônus aplicado corresponde a R$ ${economiaBonusR.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.
+
+  Caso o beneficiário tenha permanecido adimplente durante a vigência do contrato e a instituição financeira não tenha aplicado o bônus previsto na norma, o valor de R$ ${economiaBonusR.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} poderá ser objeto de restituição judicial, acrescido de correção monetária e juros legais, com fundamento no art. 42, parágrafo único, do Código de Defesa do Consumidor (Lei 8.078/1990) e no art. 884 do Código Civil (vedação ao enriquecimento sem causa).` : ""}
+
+Base normativa do bônus de adimplência:
+  - ${grupoInfo.fundamentacaoMCR}, Tabela 1 (${grupoInfo.resolucao})
+  - Lei 11.326/2006, arts. 1º e 3º — Política Nacional da Agricultura Familiar
+  - Res. CMN 5.099/2022 — Regulamentação geral do Pronaf
+  - Circular BCB nº 3.978/2020 — Conformidade em operações de crédito rural` : "O grupo contratado não possui bônus de adimplência previsto no MCR 7-6."}
+
 FUNDAMENTAÇÃO LEGAL:
 - ${grupoInfo.fundamentacaoMCR} (${grupoInfo.resolucao})
 - Lei 11.326/2006 (Política Nacional da Agricultura Familiar)
 - Decreto nº 22.626/33 (Lei de Usura) — parâmetro subsidiário
 - STJ, REsp 1.061.530/RS (recurso repetitivo) — revisão de encargos abusivos
+${excede ? "- CDC, art. 42, parágrafo único — devolução em dobro dos valores cobrados a maior" : ""}
+${temBonusAdimplencia ? "- CC, art. 884 — vedação ao enriquecimento sem causa (não aplicação indevida do bônus)" : ""}
 ${grupoInfo.observacoes ? `\nOBSERVAÇÕES ADICIONAIS:\n${grupoInfo.observacoes}` : ""}
 `.trim();
 }
