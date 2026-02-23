@@ -371,7 +371,7 @@ export default function LaudoPericial() {
               <Badge variant="outline" className="text-blue-700 border-blue-200">Autor / Produtor Rural</Badge>
             </div>
             {quesitosAutor.map((q, i) => (
-              <div key={i} className="flex items-start gap-2 p-2 bg-blue-50 rounded-lg">
+              <div key={`laudo-blue-${i}`} className="flex items-start gap-2 p-2 bg-blue-50 rounded-lg">
                 <span className="text-xs font-bold text-blue-700 mt-0.5 shrink-0">Q{i + 1}</span>
                 <p className="text-sm flex-1">{q}</p>
                 <Button
@@ -411,7 +411,7 @@ export default function LaudoPericial() {
               <Badge variant="outline" className="text-red-700 border-red-200">Reu / Banco</Badge>
             </div>
             {quesitosReu.map((q, i) => (
-              <div key={i} className="flex items-start gap-2 p-2 bg-red-50 rounded-lg">
+              <div key={`laudo-red-${i}`} className="flex items-start gap-2 p-2 bg-red-50 rounded-lg">
                 <span className="text-xs font-bold text-red-700 mt-0.5 shrink-0">Q{i + 1}</span>
                 <p className="text-sm flex-1">{q}</p>
                 <Button

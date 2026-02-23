@@ -199,7 +199,7 @@ export default function FundamentacaoLegal() {
         <CardContent>
           <Accordion type="multiple" defaultValue={["leg-0", "leg-1", "leg-2"]}>
             {legislacao.map((leg, i) => (
-              <AccordionItem key={i} value={`leg-${i}`}>
+              <AccordionItem key={leg.norma ?? leg.titulo ?? `leg-${i}`} value={`leg-${i}`}>
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3 text-left">
                     <Badge variant="outline" className="text-xs font-mono shrink-0">{leg.norma}</Badge>
@@ -211,8 +211,8 @@ export default function FundamentacaoLegal() {
                     <p className="text-sm text-muted-foreground leading-relaxed">{leg.descricao}</p>
                     <div className="space-y-1">
                       <p className="text-xs font-medium">Dispositivos Relevantes:</p>
-                      {leg.artigos.map((art, j) => (
-                        <p key={j} className="text-xs text-muted-foreground pl-2 border-l-2 border-primary/30">
+                      {leg.artigos.map((art) => (
+                        <p key={art.slice(0, 80)} className="text-xs text-muted-foreground pl-2 border-l-2 border-primary/30">
                           {art}
                         </p>
                       ))}
@@ -239,7 +239,7 @@ export default function FundamentacaoLegal() {
         <CardContent>
           <Accordion type="multiple" defaultValue={["juri-0", "juri-1"]}>
             {jurisprudencia.map((j, i) => (
-              <AccordionItem key={i} value={`juri-${i}`}>
+              <AccordionItem key={j.numero ?? `juri-${i}`} value={`juri-${i}`}>
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3 text-left">
                     <Badge className="text-xs shrink-0 bg-primary/10 text-primary border-primary/20">{j.tema}</Badge>
@@ -272,8 +272,8 @@ export default function FundamentacaoLegal() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {doutrina.map((d, i) => (
-            <div key={i} className="p-3 border rounded-lg space-y-1">
+          {doutrina.map((d) => (
+            <div key={`${d.autor}-${d.obra}`.slice(0, 80)} className="p-3 border rounded-lg space-y-1">
               <p className="text-sm font-medium">{d.autor}</p>
               <p className="text-sm text-primary italic">{d.obra}</p>
               <p className="text-xs text-muted-foreground">{d.editora}</p>

@@ -428,8 +428,8 @@ export default function AnalisarContrato() {
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription className="space-y-1">
-                    {resultado.analiseConformidade.alertas.map((a, i) => (
-                      <p key={i} className="text-sm">{a}</p>
+                    {resultado.analiseConformidade.alertas.map((a) => (
+                      <p key={a.slice(0, 80)} className="text-sm">{a}</p>
                     ))}
                   </AlertDescription>
                 </Alert>
@@ -438,8 +438,8 @@ export default function AnalisarContrato() {
               {/* Pontos de Atenção */}
               {resultado.analiseConformidade.pontosAtencao.length > 0 && (
                 <div className="space-y-1">
-                  {resultado.analiseConformidade.pontosAtencao.map((p, i) => (
-                    <p key={i} className="text-xs text-amber-700 flex gap-1">
+                  {resultado.analiseConformidade.pontosAtencao.map((p) => (
+                    <p key={p.slice(0, 80)} className="text-xs text-amber-700 flex gap-1">
                       <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" /> {p}
                     </p>
                   ))}
@@ -497,8 +497,8 @@ export default function AnalisarContrato() {
                       <div>
                         <p className="text-xs font-medium mb-2">Garantias</p>
                         <div className="flex flex-wrap gap-1">
-                          {resultado.dadosExtraidos.garantias.map((g, i) => (
-                            <Badge key={i} variant="outline" className="text-xs">{g}</Badge>
+                          {resultado.dadosExtraidos.garantias.map((g) => (
+                            <Badge key={g.slice(0, 80)} variant="outline" className="text-xs">{g}</Badge>
                           ))}
                         </div>
                       </div>
@@ -515,8 +515,8 @@ export default function AnalisarContrato() {
                           </AccordionTrigger>
                           <AccordionContent>
                             <div className="space-y-2">
-                              {resultado.dadosExtraidos.clausulasRelevantes.map((c, i) => (
-                                <p key={i} className="text-xs text-muted-foreground pl-2 border-l-2 border-primary/30">{c}</p>
+                              {resultado.dadosExtraidos.clausulasRelevantes.map((c) => (
+                                <p key={c.slice(0, 80)} className="text-xs text-muted-foreground pl-2 border-l-2 border-primary/30">{c}</p>
                               ))}
                             </div>
                           </AccordionContent>

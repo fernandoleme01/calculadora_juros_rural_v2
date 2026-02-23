@@ -177,8 +177,8 @@ export default function Resultado() {
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                {conformidade.alertas.map((alerta: string, i: number) => (
-                  <p key={i} className="text-sm">{alerta}</p>
+                {conformidade.alertas.map((alerta: string) => (
+                  <p key={alerta.slice(0, 80)} className="text-sm">{alerta}</p>
                 ))}
               </AlertDescription>
             </Alert>
@@ -186,8 +186,8 @@ export default function Resultado() {
 
           {conformidade.fundamentacao.length > 0 && (
             <div className="space-y-1">
-              {conformidade.fundamentacao.map((f: string, i: number) => (
-                <p key={i} className="text-xs text-muted-foreground flex gap-1">
+              {conformidade.fundamentacao.map((f: string) => (
+                <p key={f.slice(0, 80)} className="text-xs text-muted-foreground flex gap-1">
                   <CheckCircle className="h-3 w-3 text-emerald-500 shrink-0 mt-0.5" />
                   {f}
                 </p>
@@ -363,8 +363,8 @@ export default function Resultado() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {resultado.analiseParcelas.tabelaAmortizacao.map((linha: any, i: number) => (
-                        <TableRow key={i} className={linha.excesso > 0 ? 'bg-red-50/30' : ''}>
+                      {resultado.analiseParcelas.tabelaAmortizacao.map((linha: any) => (
+                        <TableRow key={`parcela-${linha.parcela}`} className={linha.excesso > 0 ? 'bg-red-50/30' : ''}>
                           <TableCell className="text-xs font-medium">{linha.parcela}</TableCell>
                           <TableCell className="text-xs">{formatBRL(linha.saldoInicial)}</TableCell>
                           <TableCell className="text-xs font-medium">{formatBRL(linha.prestacao)}</TableCell>
@@ -420,7 +420,7 @@ export default function Resultado() {
           <CardContent>
             <Accordion type="multiple" defaultValue={["etapa-0"]}>
               {memoria.etapas?.map((etapa: any, i: number) => (
-                <AccordionItem key={i} value={`etapa-${i}`}>
+                <AccordionItem key={etapa.descricao ?? `etapa-${i}`} value={`etapa-${i}`}>
                   <AccordionTrigger className="text-sm font-medium hover:no-underline">
                     {etapa.descricao}
                   </AccordionTrigger>
@@ -457,8 +457,8 @@ export default function Resultado() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex flex-wrap gap-2">
-              {memoria.fundamentacaoLegal.normas?.map((norma: string, i: number) => (
-                <Badge key={i} variant="outline" className="text-xs">{norma}</Badge>
+              {memoria.fundamentacaoLegal.normas?.map((norma: string) => (
+                <Badge key={norma} variant="outline" className="text-xs">{norma}</Badge>
               ))}
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -477,7 +477,7 @@ export default function Resultado() {
           <CardContent>
             <Accordion type="multiple">
               {memoria.jurisprudencia.map((j: any, i: number) => (
-                <AccordionItem key={i} value={`juri-${i}`}>
+                <AccordionItem key={j.numero ?? `juri-${i}`} value={`juri-${i}`}>
                   <AccordionTrigger className="text-sm hover:no-underline">
                     <div className="text-left">
                       <p className="font-medium">{j.tribunal}</p>

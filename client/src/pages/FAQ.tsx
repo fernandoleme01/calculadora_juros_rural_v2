@@ -169,7 +169,7 @@ function AccordionItem({ item, isOpen, onToggle }: { item: FAQItem; isOpen: bool
             <div className="mt-3 flex flex-wrap gap-1.5">
               <span className="text-xs text-muted-foreground font-medium">Fontes:</span>
               {item.sources.map((source, i) => (
-                <Badge key={i} variant="outline" className="text-xs font-normal">
+                <Badge key={`faq-badge-${i}`} variant="outline" className="text-xs font-normal">
                   {source}
                 </Badge>
               ))}

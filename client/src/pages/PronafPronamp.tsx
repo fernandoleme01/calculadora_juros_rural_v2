@@ -129,8 +129,8 @@ function GrupoCard({ grupo, onSelecionar }: GrupoCardProps) {
           <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground">Critérios de enquadramento:</p>
             <ul className="space-y-1">
-              {grupo.criteriosEnquadramento.map((c, i) => (
-                <li key={i} className="flex items-start gap-1.5 text-xs">
+              {grupo.criteriosEnquadramento.map((c) => (
+                <li key={c.slice(0, 80)} className="flex items-start gap-1.5 text-xs">
                   <CheckCircle2 className="h-3 w-3 text-green-500 mt-0.5 shrink-0" />
                   <span>{c}</span>
                 </li>
@@ -490,8 +490,8 @@ export default function PronafPronamp() {
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Critérios de Enquadramento</p>
                           <ul className="space-y-1">
-                            {dadosGrupos.pronamp.criteriosEnquadramento.map((c, i) => (
-                              <li key={i} className="flex items-start gap-1.5 text-xs">
+                            {dadosGrupos.pronamp.criteriosEnquadramento.map((c) => (
+                <li key={c.slice(0, 80)} className="flex items-start gap-1.5 text-xs">
                                 <CheckCircle2 className="h-3 w-3 text-blue-500 mt-0.5 shrink-0" />
                                 <span>{c}</span>
                               </li>
@@ -823,8 +823,8 @@ export default function PronafPronamp() {
                       </CardHeader>
                       <CardContent className="pt-0">
                         <ul className="space-y-1.5">
-                          {resultado.alertas.map((a, i) => (
-                            <li key={i} className="flex items-start gap-2 text-xs">
+                          {resultado.alertas.map((a) => (
+                            <li key={a.slice(0, 80)} className="flex items-start gap-2 text-xs">
                               <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
                               <span>{a}</span>
                             </li>
@@ -972,8 +972,8 @@ export default function PronafPronamp() {
                     { faixa: "Até R$ 500.000", programa: "Pronaf E", taxa: "5,0%", cor: "bg-blue-50 border-blue-200" },
                     { faixa: "Até R$ 2.400.000", programa: "Pronamp", taxa: "8,0–8,5%", cor: "bg-indigo-50 border-indigo-200" },
                     { faixa: "Acima de R$ 2.400.000", programa: "Crédito Rural Conv.", taxa: "12,5–14,0%", cor: "bg-gray-50 border-gray-200" },
-                  ].map((item, i) => (
-                    <div key={i} className={`flex items-center justify-between rounded-lg border px-3 py-2 ${item.cor}`}>
+                  ].map((item) => (
+                    <div key={item.faixa} className={`flex items-center justify-between rounded-lg border px-3 py-2 ${item.cor}`}>
                       <div>
                         <p className="text-xs font-semibold">{item.programa}</p>
                         <p className="text-xs text-muted-foreground">{item.faixa}</p>

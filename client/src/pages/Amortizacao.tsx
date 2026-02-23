@@ -254,7 +254,7 @@ export default function Amortizacao() {
                   <AlertDescription>
                     <ul className="space-y-1">
                       {resultado.fundamentacao.alertas.map((alerta: string, i: number) => (
-                        <li key={i} className="text-sm">{alerta}</li>
+                        <li key={alerta.slice(0, 80)} className="text-sm">{alerta}</li>
                       ))}
                     </ul>
                   </AlertDescription>
@@ -315,7 +315,7 @@ export default function Amortizacao() {
                     <CardContent>
                       <div className="bg-muted rounded-lg p-4 font-mono text-xs space-y-1">
                         {resultado.memoriaCalculo?.map((linha: string, i: number) => (
-                          <p key={i} className={linha.startsWith("───") ? "text-primary font-bold mt-2" : "text-foreground"}>
+                          <p key={`linha-${i}`} className={linha.startsWith("───") ? "text-primary font-bold mt-2" : "text-foreground"}>
                             {linha}
                           </p>
                         ))}
@@ -404,7 +404,7 @@ export default function Amortizacao() {
                         <h4 className="font-semibold text-sm mb-2">Normas Aplicáveis</h4>
                         <ul className="space-y-1">
                           {resultado.fundamentacao?.normas?.map((norma: string, i: number) => (
-                            <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                            <li key={`amort-item-${i}`} className="text-sm text-muted-foreground flex items-start gap-2">
                               <CheckCircle className="h-3 w-3 text-primary mt-0.5 shrink-0" />
                               {norma}
                             </li>
@@ -416,7 +416,7 @@ export default function Amortizacao() {
                         <h4 className="font-semibold text-sm mb-2">Jurisprudência Aplicável</h4>
                         <div className="space-y-3">
                           {resultado.fundamentacao?.jurisprudencia?.map((j: any, i: number) => (
-                            <div key={i} className="border rounded-lg p-3 bg-muted/30">
+                            <div key={`amort-div-${i}`} className="border rounded-lg p-3 bg-muted/30">
                               <div className="flex items-center gap-2 mb-1">
                                 <Badge variant="outline" className="text-xs">{j.tribunal}</Badge>
                                 <span className="text-xs font-medium text-primary">{j.numero}</span>

@@ -744,7 +744,7 @@ export default function Calculadora() {
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {ipcaMensal.map((v, i) => (
-                        <Badge key={i} variant="secondary" className="flex items-center gap-1">
+                        <Badge key={`ipca-mes-${i}`} variant="secondary" className="flex items-center gap-1">
                           Mês {i + 1}: {v.toFixed(4)}%
                           <button type="button" onClick={() => removerIpca(i)} className="ml-1 hover:text-destructive">
                             <Trash2 className="h-3 w-3" />

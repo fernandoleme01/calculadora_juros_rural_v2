@@ -265,7 +265,7 @@ export default function Assinatura() {
                 <Separator className="mb-4" />
                 <ul className="space-y-2">
                   {plano.recursos.map((recurso, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm">
+                    <li key={`assinatura-item-${i}`} className="flex items-start gap-2 text-sm">
                       {recurso.incluido ? (
                         <Check className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
                       ) : (

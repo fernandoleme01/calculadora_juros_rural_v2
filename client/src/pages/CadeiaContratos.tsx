@@ -575,7 +575,7 @@ export default function CadeiaContratos() {
                         <div className="space-y-3">
                           <h3 className="font-semibold text-sm">Alertas da Cadeia Contratual</h3>
                           {analise.alertasGerais.map((alerta: any, i: number) => (
-                            <Alert key={i} variant={alerta.tipo === "critico" ? "destructive" : "default"} className={alerta.tipo === "atencao" ? "border-amber-300 bg-amber-50" : ""}>
+                            <Alert key={alerta.mensagem?.slice(0, 60) ?? `alerta-${i}`} variant={alerta.tipo === "critico" ? "destructive" : "default"} className={alerta.tipo === "atencao" ? "border-amber-300 bg-amber-50" : ""}>
                               <AlertTriangle className="h-4 w-4" />
                               <AlertTitle className="text-sm">{alerta.titulo}</AlertTitle>
                               <AlertDescription className="text-xs mt-1">
@@ -602,7 +602,7 @@ export default function CadeiaContratos() {
                                 </div>
                                 <div className="space-y-2">
                                   {a.alertas.map((alerta: any, i: number) => (
-                                    <div key={i} className={`text-xs p-2 rounded border ${alerta.tipo === "critico" ? "bg-red-50 border-red-200 text-red-800" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
+                                    <div key={alerta.mensagem?.slice(0, 60) ?? `alerta-div-${i}`} className={`text-xs p-2 rounded border ${alerta.tipo === "critico" ? "bg-red-50 border-red-200 text-red-800" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
                                       <p className="font-semibold">{alerta.titulo}</p>
                                       <p className="mt-0.5">{alerta.descricao}</p>
                                     </div>
