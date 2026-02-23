@@ -47,21 +47,54 @@ export async function setupVite(app: Express, server: Server) {
   });
 }
 
-export function serveStatic(app: Express) {
-  const distPath =
-    process.env.NODE_ENV === "development"
-      ? path.resolve(import.meta.dirname, "../..", "dist", "public")
-      : path.resolve(import.meta.dirname, "public");
-  if (!fs.existsSync(distPath)) {
-    console.error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
-    );
+/**
+ * Resolve o caminho do diretório de build do cliente.
+ * Tenta múltiplos candidatos para garantir compatibilidade em todos os
+ * ambientes de produção (local, Manus, Docker, etc.).
+ */
+function resolveDistPath(): string {
+  const candidates = [
+    // Quando o bundle está em dist/index.js → dist/public
+    path.resolve(import.meta.dirname, "public"),
+    // Quando executado a partir da raiz do projeto (ts-node / tsx)
+    path.resolve(import.meta.dirname, "../..", "dist", "public"),
+    // Caminho absoluto baseado em process.cwd()
+    path.resolve(process.cwd(), "dist", "public"),
+    // Fallback: um nível acima do dirname
+    path.resolve(import.meta.dirname, "..", "public"),
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(path.join(candidate, "index.html"))) {
+      console.log(`[serveStatic] Usando distPath: ${candidate}`);
+      return candidate;
+    }
   }
+
+  // Se nenhum candidato tiver index.html, usa o primeiro e loga o aviso
+  const fallback = candidates[0];
+  console.error(
+    `[serveStatic] AVISO: index.html não encontrado em nenhum candidato. Tentados:\n` +
+    candidates.map((c) => `  - ${c}`).join("\n") +
+    `\nUsando fallback: ${fallback}`
+  );
+  return fallback;
+}
+
+export function serveStatic(app: Express) {
+  const distPath = resolveDistPath();
 
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
+  // Catch-all: serve index.html para qualquer rota não-API (SPA React)
   app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+    const indexPath = path.resolve(distPath, "index.html");
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(500).send(
+        "Erro interno: index.html não encontrado. Verifique o build do cliente."
+      );
+    }
   });
 }
