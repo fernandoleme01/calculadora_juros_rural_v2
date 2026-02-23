@@ -26,6 +26,7 @@ import Privacidade from "./pages/Privacidade";
 import FAQ from "./pages/FAQ";
 import Termos from "./pages/Termos";
 import Glossario from "./pages/Glossario";
+import PronafPronamp from "./pages/PronafPronamp";
 import CookieBanner from "./components/CookieBanner";
 import DashboardLayout from "./components/DashboardLayout";
 
@@ -65,6 +66,7 @@ function DashboardRoutes() {
         <Route path="/app/laudo-pericial" component={LaudoPericial} />
         <Route path="/app/peticao-ded" component={PeticaoDEDDDC} />
         <Route path="/app/upload-ded" component={UploadDED} />
+        <Route path="/app/pronaf-pronamp" component={PronafPronamp} />
         <Route component={NotFound} />
       </Switch>
     </DashboardLayout>

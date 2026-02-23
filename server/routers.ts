@@ -61,6 +61,15 @@ import {
   calcularComparativoMCR,
 } from "./limitesLegais";
 import {
+  GRUPOS_PRONAF,
+  PRONAMP_INFO,
+  TABELA_COMPARATIVA,
+  calcularComparativoPronaf,
+  calcularComparativoPronamp,
+  sugerirEnquadramento,
+  type GrupoPronaf,
+} from "./pronafPronamp";
+import {
   criarCadeiaContratos,
   listarCadeiasPorUsuario,
   buscarCadeiaComContratos,
@@ -1330,6 +1339,61 @@ Retorne exatamente:
         }
 
         return { dados, pdfUrl, sucesso: true };
+      }),
+  }),
+
+  // ─── Pronaf / Pronamp ─────────────────────────────────────────────────────
+  pronaf: router({
+
+    // Retorna todos os grupos Pronaf com critérios e taxas
+    listarGrupos: publicProcedure.query(() => {
+      return {
+        grupos: Object.values(GRUPOS_PRONAF),
+        pronamp: PRONAMP_INFO,
+        tabelaComparativa: TABELA_COMPARATIVA,
+      };
+    }),
+
+    // Sugere enquadramento com base na renda bruta anual
+    sugerirEnquadramento: publicProcedure
+      .input(z.object({
+        rendaBrutaAnual: z.number().positive(),
+      }))
+      .query(({ input }) => {
+        return sugerirEnquadramento(input.rendaBrutaAnual);
+      }),
+
+    // Calcula comparativo Pronaf: taxa contratada vs. limite legal
+    calcularComparativo: publicProcedure
+      .input(z.object({
+        programa: z.enum(["Pronaf", "Pronamp"]),
+        grupoPronaf: z.string().optional(),
+        finalidade: z.enum(["custeio", "investimento", "comercializacao"]),
+        taxaContratadaAA: z.number().positive(),
+        valorPrincipal: z.number().positive().optional(),
+        prazoMeses: z.number().int().positive().optional(),
+        dataContrato: z.string().optional(),
+        nomeBeneficiario: z.string().optional(),
+        nomeInstituicao: z.string().optional(),
+        numeroCedula: z.string().optional(),
+      }))
+      .mutation(({ input }) => {
+        const dados = {
+          taxaContratadaAA: input.taxaContratadaAA,
+          finalidade: input.finalidade as "custeio" | "investimento" | "comercializacao",
+          grupoPronaf: input.grupoPronaf as GrupoPronaf | undefined,
+          valorPrincipal: input.valorPrincipal,
+          prazoMeses: input.prazoMeses,
+          dataContrato: input.dataContrato,
+          nomeBeneficiario: input.nomeBeneficiario,
+          nomeInstituicao: input.nomeInstituicao,
+          numeroCedula: input.numeroCedula,
+        };
+
+        if (input.programa === "Pronamp") {
+          return calcularComparativoPronamp(dados);
+        }
+        return calcularComparativoPronaf(dados);
       }),
   }),
 });

@@ -24,7 +24,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import {
   LayoutDashboard, LogOut, PanelLeft, Calculator, History, BookOpen, Scale,
   FileSearch, Landmark, Gavel, Shield, CreditCard, UserCog, BarChart3,
-  Link2, Upload, FilePen, HelpCircle, Library
+  Link2, Upload, FilePen, HelpCircle, Library, Sprout
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -45,6 +45,7 @@ const menuGroups = [
       { icon: Calculator,  label: "Calculadora TCR",       path: "/app/calculadora" },
       { icon: BarChart3,   label: "Tabela de Amortização", path: "/app/amortizacao" },
       { icon: Link2,       label: "Cadeia de Contratos",   path: "/app/cadeia-contratos" },
+      { icon: Sprout,      label: "Pronaf / Pronamp",       path: "/app/pronaf-pronamp" },
       { icon: Landmark,    label: "Dados do BCB",           path: "/app/dados-bcb" },
     ],
   },

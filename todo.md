@@ -381,3 +381,18 @@
 - [x] Busca por termo e filtro por categoria
 - [x] Link no menu lateral (grupo Referência) e no rodapé
 - [x] Link na página de Fundamentação Legal
+
+## Módulo Pronaf / Pronamp
+
+- [x] Backend: módulo pronafPronamp.ts com dados completos MCR 7-6 e 7-4
+- [x] 12 grupos Pronaf (A, A/C, B, C, D, E, Mulher, Jovem, Agroecologia, Floresta, Semiárido, Bioeconomia)
+- [x] Dados Pronamp com critérios de enquadramento e taxas diferenciadas
+- [x] Tabela comparativa completa (16 linhas: Pronaf + Pronamp + Convencional)
+- [x] Função sugerirEnquadramento() por faixa de renda bruta anual
+- [x] Endpoints tRPC: listarGrupos, sugerirEnquadramento, calcularComparativo
+- [x] Página /app/pronaf-pronamp com 3 abas (Tabela, Comparativo, Enquadramento)
+- [x] Tabela de taxas com filtros por programa e finalidade
+- [x] Cards dos grupos com critérios expansíveis e botão "Usar neste grupo"
+- [x] Formulário de comparativo com resultado, métricas e texto para laudo
+- [x] Simulador de enquadramento por renda bruta anual
+- [x] Item "Pronaf / Pronamp" no menu lateral (grupo Cálculo e Análise)
