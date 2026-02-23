@@ -596,11 +596,13 @@ export default function LandingPage() {
           </div>
 
           <div className="mt-6 pt-6 border-t border-white/5 flex flex-wrap justify-center gap-6 text-xs text-slate-600">
-            <span>© {new Date().getFullYear()} JurosRurais.pro</span>
+            <span>© {new Date().getFullYear()} JurosRurais.pro — LoboLab Tecnologia Jurídica</span>
+            <span>·</span>
+            <a href="/privacidade" className="hover:text-slate-400 transition-colors">Política de Privacidade</a>
+            <span>·</span>
+            <a href="/termos" className="hover:text-slate-400 transition-colors">Termos de Uso</a>
             <span>·</span>
             <span>Lei 4.829/65 · DL 167/67 · Dec. 22.626/33 · Res. CMN 4.913/21</span>
-            <span>·</span>
-            <span>Jurisprudência STJ</span>
           </div>
         </div>
       </footer>

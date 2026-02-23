@@ -358,3 +358,11 @@
 - [x] Integração na página UploadDED após extração
 - [x] Integração na Calculadora.tsx quando dados vêm do DED/DDC
 - [x] Sugestão de ação corretiva para cada campo ausente
+
+## Conformidade Legal — LGPD e OAB
+- [ ] Página /privacidade com Política de Privacidade completa (LGPD)
+- [ ] Página /termos com Termos de Uso completos (Marco Civil da Internet)
+- [ ] Banner de consentimento de cookies
+- [ ] Disclaimer nos documentos gerados por IA (laudo pericial e petições)
+- [ ] Links no rodapé da landing page e do dashboard
+- [ ] Rota /privacidade e /termos no App.tsx

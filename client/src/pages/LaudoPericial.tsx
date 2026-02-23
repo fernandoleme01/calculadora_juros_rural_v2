@@ -491,6 +491,14 @@ export default function LaudoPericial() {
                   <p className="text-xs mt-1">Processo n.: {numeroProcesso} | Comarca: {comarca || "___"}</p>
                 )}
               </div>
+              {/* Disclaimer obrigatório — Provimento OAB 205/2021 */}
+              <div className="rounded border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-4 py-3 mb-4 flex gap-3 items-start">
+                <span className="text-amber-600 dark:text-amber-400 text-lg leading-none mt-0.5">⚠</span>
+                <div className="text-xs text-amber-800 dark:text-amber-300 space-y-1">
+                  <p className="font-semibold">MINUTA PARA REVISÃO PROFISSIONAL</p>
+                  <p>Este documento foi gerado automaticamente por sistema de inteligência artificial e constitui <strong>minuta preliminar</strong> para revisão, validação técnica e assinatura do perito ou advogado responsável. Não substitui o julgamento profissional nem o exercício privativo da advocacia (Lei 8.906/1994 · Provimento OAB 205/2021). O profissional é o único responsável pelo conteúdo final utilizado em processo judicial ou extrajudicial.</p>
+                </div>
+              </div>
               <div className="prose prose-sm max-w-none">
                 <Streamdown>{laudoGerado}</Streamdown>
               </div>

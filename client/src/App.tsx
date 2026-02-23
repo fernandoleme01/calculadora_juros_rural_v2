@@ -22,6 +22,9 @@ import LaudoPericial from "./pages/LaudoPericial";
 import PeticaoDEDDDC from "./pages/PeticaoDEDDDC";
 import UploadDED from "./pages/UploadDED";
 import Login from "./pages/Login";
+import Privacidade from "./pages/Privacidade";
+import Termos from "./pages/Termos";
+import CookieBanner from "./components/CookieBanner";
 import DashboardLayout from "./components/DashboardLayout";
 
 // Rotas públicas (sem autenticação, sem DashboardLayout)
@@ -30,6 +33,8 @@ function PublicRoutes() {
     <Switch>
       <Route path="/" component={LandingPage} />
       <Route path="/login" component={Login} />
+      <Route path="/privacidade" component={Privacidade} />
+      <Route path="/termos" component={Termos} />
     </Switch>
   );
 }
@@ -77,6 +82,9 @@ function Router() {
       <Route path="/analisar-contrato" component={() => { window.location.replace("/app/analisar-contrato"); return null; }} />
       <Route path="/dados-bcb" component={() => { window.location.replace("/app/dados-bcb"); return null; }} />
       <Route path="/gerador-peticao" component={() => { window.location.replace("/app/gerador-peticao"); return null; }} />
+      <Route path="/login" component={Login} />
+      <Route path="/privacidade" component={Privacidade} />
+      <Route path="/termos" component={Termos} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
@@ -90,6 +98,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
+          <CookieBanner />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
