@@ -329,3 +329,15 @@
 - [x] Frontend: exibição e impressão da petição gerada
 - [x] App.tsx: rota /app/peticao-ded registrada
 - [x] DashboardLayout: item "Petição DED/DDC" no menu lateral
+
+## Upload DED/DDC com Extração Automática via IA
+- [ ] Backend: endpoint tRPC extrairDadosDEDDDC — recebe PDF, extrai texto, usa LLM estruturado
+- [ ] Backend: upload do PDF para S3 antes da extração
+- [ ] Backend: LLM extrai valor principal, taxas, parcelas, datas, banco, modalidade, sistema amortização, IOF, TAC, TEC
+- [ ] Backend: retorna dados estruturados + checklist de campos encontrados/ausentes
+- [ ] Frontend: componente UploadDEDDDC.tsx com drag-and-drop, barra de progresso e checklist
+- [ ] Frontend: exibição dos dados extraídos com badge "Extraído do DED/DDC"
+- [ ] Frontend: botão "Preencher Calculadora" que navega para /app/calculadora com dados pré-preenchidos
+- [ ] Frontend: integração na Calculadora.tsx com banner de importação e campos marcados
+- [ ] App.tsx: rota /app/upload-ded registrada
+- [ ] DashboardLayout: item "Importar DED/DDC" no menu lateral

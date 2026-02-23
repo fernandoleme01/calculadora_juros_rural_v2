@@ -66,7 +66,7 @@ export default function Calculadora() {
   const [pdfExtraido, setPdfExtraido] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [mostrarParcelas, setMostrarParcelas] = useState(false);
-  const [linhaSelecionada, setLinhaSelecionada] = useState<string>("");
+  const [linhaSelecionada, setLinhaSelecionada] = useState<string>("nenhuma");
 
   const { data: limites } = trpc.tcr.limitesLegais.useQuery();
   const { data: linhasCredito } = trpc.mcr.linhas.useQuery();
@@ -109,7 +109,7 @@ export default function Calculadora() {
   const prazoMesesAtual = watch("prazoMeses");
   const { data: comparativoMCR } = trpc.mcr.comparativo.useQuery(
     { taxaContratadaAA: taxaRemAtual || 0, linhaId: linhaSelecionada, valorPrincipal: valorPrincipalAtual, prazoMeses: prazoMesesAtual },
-    { enabled: !!linhaSelecionada && !!taxaRemAtual && taxaRemAtual > 0 }
+    { enabled: !!linhaSelecionada && linhaSelecionada !== "nenhuma" && !!taxaRemAtual && taxaRemAtual > 0 }
   );
 
   const adicionarIpca = () => {
@@ -265,7 +265,7 @@ export default function Calculadora() {
                   <SelectValue placeholder="Selecione para confronto com norma MCR" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Não informar</SelectItem>
+                  <SelectItem value="nenhuma">Não informar</SelectItem>
                   {linhasCredito && [
                     { grupo: "pronaf", label: "Pronaf" },
                     { grupo: "pronamp", label: "Pronamp" },
