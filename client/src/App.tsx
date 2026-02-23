@@ -23,6 +23,7 @@ import PeticaoDEDDDC from "./pages/PeticaoDEDDDC";
 import UploadDED from "./pages/UploadDED";
 import Login from "./pages/Login";
 import Privacidade from "./pages/Privacidade";
+import FAQ from "./pages/FAQ";
 import Termos from "./pages/Termos";
 import CookieBanner from "./components/CookieBanner";
 import DashboardLayout from "./components/DashboardLayout";
@@ -35,6 +36,7 @@ function PublicRoutes() {
       <Route path="/login" component={Login} />
       <Route path="/privacidade" component={Privacidade} />
       <Route path="/termos" component={Termos} />
+      <Route path="/faq" component={FAQ} />
     </Switch>
   );
 }
@@ -85,6 +87,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/privacidade" component={Privacidade} />
       <Route path="/termos" component={Termos} />
+      <Route path="/faq" component={FAQ} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

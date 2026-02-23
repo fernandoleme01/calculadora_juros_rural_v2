@@ -366,3 +366,11 @@
 - [ ] Disclaimer nos documentos gerados por IA (laudo pericial e petições)
 - [ ] Links no rodapé da landing page e do dashboard
 - [ ] Rota /privacidade e /termos no App.tsx
+
+## FAQ — Perguntas Frequentes
+
+- [x] Página /faq com acordeão de perguntas sobre metodologia TCR
+- [x] Seção FAQ na landing page
+- [x] Link no menu lateral (grupo Referência) e no rodapé
+- [x] Perguntas sobre fontes de dados (BCB, CMN, MCR)
+- [x] Perguntas sobre LGPD e segurança dos dados

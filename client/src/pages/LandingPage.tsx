@@ -602,6 +602,8 @@ export default function LandingPage() {
             <span>·</span>
             <a href="/termos" className="hover:text-slate-400 transition-colors">Termos de Uso</a>
             <span>·</span>
+            <a href="/faq" className="hover:text-slate-400 transition-colors">FAQ</a>
+            <span>·</span>
             <span>Lei 4.829/65 · DL 167/67 · Dec. 22.626/33 · Res. CMN 4.913/21</span>
           </div>
         </div>
