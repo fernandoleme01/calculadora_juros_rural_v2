@@ -41,8 +41,8 @@ const peticaoSchema = z.object({
   modalidade: z.enum(["custeio", "investimento", "comercializacao"]),
   cultura: z.string().min(2, "Cultura obrigatória"),
   anoSafra: z.string().min(4, "Ano da safra obrigatório"),
-  taxaJurosContratada: z.number().min(0).max(100),
-  taxaJurosMoraContratada: z.number().min(0).max(100).default(1),
+  taxaJurosContratada: z.number().min(0).max(9999),
+  taxaJurosMoraContratada: z.number().min(0).max(9999).default(1),
   garantias: z.string().min(5, "Descreva as garantias"),
   // Dados do Evento
   tipoEvento: z.string().min(3, "Tipo do evento obrigatório"),

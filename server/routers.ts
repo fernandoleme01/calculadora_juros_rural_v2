@@ -92,9 +92,9 @@ const dadosFinanciamentoSchema = z.object({
   dataVencimento: z.string().datetime(),
   dataCalculo: z.string().datetime(),
   prazoMeses: z.number().int().positive(),
-  taxaJurosRemuneratorios: z.number().min(0).max(100),
-  taxaJurosMora: z.number().min(0).max(100).default(1),
-  taxaMulta: z.number().min(0).max(10).default(2),
+  taxaJurosRemuneratorios: z.number().min(0).max(9999),
+  taxaJurosMora: z.number().min(0).max(9999).default(1),
+  taxaMulta: z.number().min(0).max(100).default(2),
   // TCRpós
   ipcaMensal: z.array(z.number()).optional(),
   // TCRpré

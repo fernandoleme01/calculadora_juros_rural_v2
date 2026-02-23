@@ -31,9 +31,10 @@ const formSchema = z.object({
   dataVencimento: z.string().min(1, "Informe a data de vencimento"),
   dataCalculo: z.string().min(1, "Informe a data do cálculo"),
   prazoMeses: z.coerce.number().int().positive("Informe o prazo em meses"),
-  taxaJurosRemuneratorios: z.coerce.number().min(0).max(100),
-  taxaJurosMora: z.coerce.number().min(0).max(100).default(1),
-  taxaMulta: z.coerce.number().min(0).max(10).default(2),
+  taxaJurosRemuneratorios: z.coerce.number().min(0).max(9999),
+  taxaJurosMora: z.coerce.number().min(0).max(9999).default(1),
+  taxaJurosMoraUnidade: z.enum(["aa", "am"]).default("aa"),
+  taxaMulta: z.coerce.number().min(0).max(100).default(2),
   taxaJm: z.union([z.string(), z.number()]).optional().transform(v => {
     if (v === "" || v === null || v === undefined) return undefined;
     const n = typeof v === "number" ? v : parseFloat(String(v).replace(",", "."));
@@ -118,6 +119,7 @@ export default function Calculadora() {
       modalidade: "custeio",
       tipoTaxa: "pos_fixada",
       taxaJurosMora: 1,
+      taxaJurosMoraUnidade: "aa" as const,
       taxaMulta: 2,
       fatorAjuste: 0,
       salvar: true,
@@ -181,9 +183,21 @@ export default function Calculadora() {
     setIpcaMensal(ipcaMensal.filter((_, i) => i !== idx));
   };
 
+  const taxaMoraUnidade = watch("taxaJurosMoraUnidade");
+
+  // Converte mora para % a.a. se informada em % a.m.
+  const taxaMoraEmAA = taxaMoraUnidade === "am"
+    ? (Math.pow(1 + (taxaMora || 0) / 100, 12) - 1) * 100
+    : (taxaMora || 0);
+
   const onSubmit = (data: FormValues) => {
+    // Normalizar mora para % a.a. antes de enviar
+    const taxaMoraAA = data.taxaJurosMoraUnidade === "am"
+      ? (Math.pow(1 + data.taxaJurosMora / 100, 12) - 1) * 100
+      : data.taxaJurosMora;
     const payload = {
       ...data,
+      taxaJurosMora: taxaMoraAA,
       dataContratacao: new Date(data.dataContratacao).toISOString(),
       dataVencimento: new Date(data.dataVencimento).toISOString(),
       dataCalculo: new Date(data.dataCalculo).toISOString(),
@@ -193,7 +207,7 @@ export default function Calculadora() {
   };
 
   const limiteRemExcedido = taxaRem > (limites?.jurosRemuneratoriosMaxAA ?? 12);
-  const limiteMoraExcedido = taxaMora > (limites?.jurosMoraMaxAA ?? 1);
+  const limiteMoraExcedido = taxaMoraEmAA > (limites?.jurosMoraMaxAA ?? 1);
 
   // Mapeamento de modalidade do PDF para o enum do formulário
   const mapModalidade = (m: string | null): "custeio" | "investimento" | "comercializacao" => {
@@ -468,17 +482,36 @@ export default function Calculadora() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="taxaJurosMora">
-                  Juros de Mora (% a.a.)
+                  Juros de Mora
                   <Badge variant="outline" className="ml-2 text-xs">Máx. {limites?.jurosMoraMaxAA ?? 1}% a.a.</Badge>
                 </Label>
-                <Input
-                  id="taxaJurosMora"
-                  type="number"
-                  step="0.001"
-                  placeholder="1.000"
-                  {...register("taxaJurosMora")}
-                  className={limiteMoraExcedido ? "border-destructive" : ""}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="taxaJurosMora"
+                    type="number"
+                    step="0.001"
+                    placeholder={taxaMoraUnidade === "am" ? "2.000" : "1.000"}
+                    {...register("taxaJurosMora")}
+                    className={limiteMoraExcedido ? "border-destructive flex-1" : "flex-1"}
+                  />
+                  <Select
+                    value={taxaMoraUnidade}
+                    onValueChange={(v) => setValue("taxaJurosMoraUnidade", v as "aa" | "am")}
+                  >
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="aa">% a.a.</SelectItem>
+                      <SelectItem value="am">% a.m.</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {taxaMoraUnidade === "am" && taxaMora > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Equivale a {taxaMoraEmAA.toFixed(4)}% a.a.
+                  </p>
+                )}
                 {limiteMoraExcedido && (
                   <p className="text-xs text-destructive flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" /> Excede o limite legal de {limites?.jurosMoraMaxAA ?? 1}% a.a. (DL 167/67, art. 5º)
