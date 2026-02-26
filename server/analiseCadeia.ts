@@ -170,21 +170,60 @@ export function analisarCadeiaContratual(contratos: ContratoNaCadeia[]): Resulta
     }
 
     // ── Verificar operação mata-mata ──
+    // Melhoria 8: o alerta de mata-mata é condicionado ao comportamento do novo principal:
+    //   • Novo valor > anterior             → Mata-mata CLARO (aumento do principal: incorporou encargos + juros)
+    //   • Novo valor entre 90% e 100% do anterior → Mata-mata SUSPEITO (manteve valor sem redução real)
+    //   • Novo valor < 90% do anterior      → Renegociação com desconto expressivo (quitação parcial legítima)
     if (anterior && (contrato.tipo === "refinanciamento" || contrato.tipo === "novacao")) {
-      mataMataNoContrato = true;
-      mataMataDetectado = true;
-
-      // Calcular percentual de aumento
       percentualAumentoSobreAnterior = ((contrato.valorContrato - anterior.valorContrato) / anterior.valorContrato) * 100;
 
-      alertasContrato.push({
-        tipo: "critico",
-        codigo: "MATA_MATA",
-        titulo: "Operação Mata-Mata Detectada",
-        descricao: `O contrato nº ${contrato.numeroContrato} (${contrato.tipo === "refinanciamento" ? "refinanciamento" : "novação"}) foi celebrado para quitar o contrato anterior nº ${anterior.numeroContrato}. O valor do novo contrato (R$ ${contrato.valorContrato.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}) é ${percentualAumentoSobreAnterior > 0 ? `${percentualAumentoSobreAnterior.toFixed(2)}% maior que o contrato anterior` : "diferente do contrato anterior"}, indicando possível incorporação de encargos ao novo principal.`,
-        fundamentacao: "AgRg no REsp 1.370.585/RS; REsp 1.286.698/RS; Decreto nº 22.626/33, art. 4º",
-        contratosAfetados: [anterior.ordem, contrato.ordem],
-      });
+      const tipoLabel = contrato.tipo === "refinanciamento" ? "refinanciamento" : "novação";
+      const fmtNovo = contrato.valorContrato.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+      const fmtAnterior = anterior.valorContrato.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+
+      if (contrato.valorContrato > anterior.valorContrato) {
+        // Caso 1: novo principal MAIOR que o anterior — mata-mata inequívoco
+        mataMataNoContrato = true;
+        mataMataDetectado = true;
+
+        alertasContrato.push({
+          tipo: "critico",
+          codigo: "MATA_MATA",
+          titulo: "Operação Mata-Mata Detectada — Aumento do Principal",
+          descricao: `O contrato nº ${contrato.numeroContrato} (${tipoLabel}) foi celebrado para quitar o contrato anterior nº ${anterior.numeroContrato}. O novo principal (R$ ${fmtNovo}) é ${percentualAumentoSobreAnterior.toFixed(2)}% MAIOR que o contrato anterior (R$ ${fmtAnterior}), evidenciando incorporação de encargos (juros vencidos, multa e/ou correção) ao novo principal. Configura anatocismo vedado pelo Decreto nº 22.626/33.`,
+          fundamentacao: "AgRg no REsp 1.370.585/RS; REsp 1.286.698/RS; Decreto nº 22.626/33, art. 4º",
+          contratosAfetados: [anterior.ordem, contrato.ordem],
+        });
+
+      } else if (contrato.valorContrato >= anterior.valorContrato * 0.9) {
+        // Caso 2: novo principal equivalente ao anterior (variação < 10%) — mata-mata suspeito
+        // O banco pode ter incorporado encargos ao mesmo tempo que concedeu pequeno desconto,
+        // resultando em valor aparentemente igual mas com capitalização disfarçada.
+        mataMataNoContrato = true;
+        mataMataDetectado = true;
+
+        alertasContrato.push({
+          tipo: "critico",
+          codigo: "MATA_MATA",
+          titulo: "Operação Mata-Mata Detectada — Principal Mantido (Incorporação Provável)",
+          descricao: `O contrato nº ${contrato.numeroContrato} (${tipoLabel}) foi celebrado para quitar o contrato anterior nº ${anterior.numeroContrato}. O novo principal (R$ ${fmtNovo}) é praticamente igual ao anterior (R$ ${fmtAnterior}, variação de apenas ${Math.abs(percentualAumentoSobreAnterior).toFixed(2)}%), sem redução real da dívida, indicando provável incorporação disfarçada de encargos ao novo principal. Em renegociação legítima, seria esperada uma redução expressiva do saldo.`,
+          fundamentacao: "AgRg no REsp 1.370.585/RS; REsp 1.286.698/RS; Decreto nº 22.626/33, art. 4º",
+          contratosAfetados: [anterior.ordem, contrato.ordem],
+        });
+
+      } else {
+        // Caso 3: novo principal MENOR que 90% do anterior — renegociação com desconto legítima
+        // Redução expressiva indica que houve negociação real com perdão parcial ou novo crédito
+        // sem incorporação de encargos. NÃO configura mata-mata.
+        alertasContrato.push({
+          tipo: "informativo",
+          codigo: "RENEGOCIACAO_COM_DESCONTO",
+          titulo: "Renegociação com Redução de Saldo — Não Configura Mata-Mata",
+          descricao: `O contrato nº ${contrato.numeroContrato} (${tipoLabel}) renovou o contrato anterior nº ${anterior.numeroContrato} com redução de ${Math.abs(percentualAumentoSobreAnterior).toFixed(2)}% no valor (de R$ ${fmtAnterior} para R$ ${fmtNovo}). A redução expressiva do novo principal indica quitação parcial legítima, novação com desconto ou renegociação sem incorporação indevida de encargos. Não configura operação mata-mata.`,
+          fundamentacao: "Art. 385 do Código Civil — Novação com redução da obrigação; Art. 840 do CC — Transação",
+          contratosAfetados: [anterior.ordem, contrato.ordem],
+        });
+      }
     }
 
     // ── Verificar capitalização indevida de juros ──

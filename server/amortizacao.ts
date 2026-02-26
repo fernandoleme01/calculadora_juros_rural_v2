@@ -242,6 +242,16 @@ export function gerarPlanilhaSAC(
  * Similar ao Price, mas com recálculo da prestação a cada período
  * Comum em financiamentos rurais com carência e atualização monetária
  */
+/**
+ * Gera a planilha do Sistema de Amortização Francês Adaptado (SAF).
+ *
+ * ⚠️ NOTA TÉCNICA: O SAF implementado aqui recalcula a prestação
+ * a cada período sobre o saldo remanescente. Matematicamente, isso é
+ * **equivalente ao Sistema Price** (o PMT resultante é o mesmo em cada período).
+ * O SAF do MCR-2-6 previsto no Manual de Crédito Rural difere do Price
+ * principalmente quando há **carência** ou **atualização monetária do saldo**.
+ * Para fins de revisão judicial sem carência, este cálculo é equivalente.
+ */
 export function gerarPlanilhaSAF(
   principal: number,
   taxaPeriodica: number,
@@ -249,14 +259,14 @@ export function gerarPlanilhaSAF(
   taxaLegalPeriodica: number,
   valoresPagos?: number[]
 ): LinhaAmortizacao[] {
-  // SAF: prestação recalculada a cada período sobre o saldo remanescente
+  // SAF sem carência ≈ Price: prestação é recalculada a cada período sobre o
+  // saldo remanescente, gerando o mesmo PMT do Price puro.
   const planilha: LinhaAmortizacao[] = [];
   let saldo = principal;
   let saldoLegal = principal;
   let parcelasRestantes = numeroParcelas;
 
   for (let i = 1; i <= numeroParcelas; i++) {
-    // Recalcula prestação sobre saldo atual (diferença do Price puro)
     const prestacao = calcularPrestacaoPrice(saldo, taxaPeriodica, parcelasRestantes);
     const juros = saldo * taxaPeriodica;
     const amortizacao = prestacao - juros;
@@ -390,7 +400,7 @@ export function calcularAmortizacao(dados: DadosAmortizacao): ResultadoAmortizac
   ];
 
   // Fundamentação
-  const fundamentacao = gerarFundamentacao(sistema, periodicidade, taxaJurosAnual, excessoTotal);
+  const fundamentacao = gerarFundamentacao(sistema, periodicidade, taxaJurosAnual, excessoTotal, dados.modalidade);
 
   return {
     valorPrincipal,
@@ -427,17 +437,40 @@ function getSistemaDescricao(sistema: SistemaAmortizacao): string {
   }
 }
 
+/**
+ * Gera a fundamentação jurídica para o resultado da amortização.
+ *
+ * @param sistema           Sistema de amortização (Price, SAC, SAF)
+ * @param periodicidade     Periodicidade das parcelas
+ * @param taxaJurosAnual    Taxa contratada (% a.a.)
+ * @param excessoTotal      Excesso cobrado acima do limite legal (R$)
+ * @param modalidade        Modalidade do crédito (opcional) — determina o limite correto
+ */
 function gerarFundamentacao(
   sistema: SistemaAmortizacao,
   periodicidade: PeriodicidadeParcela,
   taxaJurosAnual: number,
-  excessoTotal: number
+  excessoTotal: number,
+  modalidade?: string
 ): FundamentacaoAmortizacao {
   const alertas: string[] = [];
 
-  if (taxaJurosAnual > TAXA_LEGAL_MAXIMA_AA) {
+  // Determina o limite correto pela modalidade (ou usa padrão de 12% a.a.)
+  let taxaLimiteAA = TAXA_LEGAL_MAXIMA_AA; // 12% a.a.
+  let fonteLimite = `${TAXA_LEGAL_MAXIMA_AA}% a.a. (Decreto nº 22.626/33 — Lei de Usura)`;
+  if (modalidade) {
+    try {
+      const { taxa, limite } = getTaxaLimite(modalidade as ModalidadeCredito);
+      taxaLimiteAA = taxa;
+      fonteLimite = `${taxa.toFixed(1)}% a.a. (${limite.fundamentacao.mcrSecao} — ${limite.fundamentacao.resolucao})`;
+    } catch {
+      // Modalidade não mapeada: mantém o padrão
+    }
+  }
+
+  if (taxaJurosAnual > taxaLimiteAA) {
     alertas.push(
-      `A taxa de juros contratada de ${taxaJurosAnual.toFixed(2)}% a.a. EXCEDE o limite legal de ${TAXA_LEGAL_MAXIMA_AA}% a.a. estabelecido pelo Decreto nº 22.626/33 (Lei de Usura) e pela jurisprudência consolidada do STJ.`
+      `A taxa de juros contratada de ${taxaJurosAnual.toFixed(2)}% a.a. EXCEDE o limite legal de ${fonteLimite}.`
     );
     alertas.push(
       `O excesso total cobrado de ${excessoTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} é passível de revisão judicial com fundamento na teoria da onerosidade excessiva (art. 478 do Código Civil).`
@@ -450,6 +483,12 @@ function gerarFundamentacao(
     );
   }
 
+  if (sistema === "saf") {
+    alertas.push(
+      `NOTA TÉCNICA — SAF: O Sistema de Amortização Francês Adaptado aplicado aqui, sem carência e sem atualização monetária do saldo, é matematicamente equivalente ao Sistema Price. Se o contrato prevê carência ou correção do saldo, o cálculo deve ser ajustado conforme o MCR 2-6.`
+    );
+  }
+
   return {
     sistemaDescricao: getSistemaDescricao(sistema),
     periodicidadeDescricao: periodicidade === "anual"
@@ -458,7 +497,8 @@ function gerarFundamentacao(
     normas: [
       "Lei nº 4.829/65 — Sistema Nacional de Crédito Rural (SNCR)",
       "Decreto-Lei nº 167/67 — Cédula de Crédito Rural",
-      "Decreto nº 22.626/33 — Lei de Usura: limite de 12% a.a. para juros remuneratórios",
+      `Decreto nº 22.626/33 — Lei de Usura: limite de 12% a.a. para juros remuneratórios (revisão judicial)`,
+      `Limite específico desta modalidade: ${fonteLimite}`,
       "Código Civil, art. 406 — Juros moratórios",
       "Código Civil, arts. 478-480 — Onerosidade excessiva e revisão contratual",
       "Resolução CMN nº 4.883/2020 — Metodologia TCR pós-fixada",
@@ -479,7 +519,7 @@ function gerarFundamentacao(
       {
         tribunal: "STJ",
         numero: "AgRg no REsp 1.370.585/PR",
-        ementa: "Crédito rural. Sistema Price. Capitalização mensal de juros. Necessidade de pactuação expressa. Ausente a pactuação, aplica-se o limite legal de 12% ao ano, vedada a capitalização mensal.",
+        ementa: "Crédito rural. Sistema Price. Capitalização mensal de juros. Necessidade de pactução expressa. Ausente a pactução, aplica-se o limite legal de 12% ao ano, vedada a capitalização mensal.",
       },
       {
         tribunal: "STJ",

@@ -28,16 +28,25 @@ describe("calcularDiasCorridos", () => {
 });
 
 describe("calcularMeses", () => {
-  it("deve calcular meses entre duas datas", () => {
-    const inicio = new Date("2024-01-01");
-    const fim = new Date("2024-07-01");
+  it("deve calcular meses entre duas datas no mesmo ano", () => {
+    // Usa construtor local (year, month 0-indexed, day) para evitar diferença de UTC
+    const inicio = new Date(2024, 0, 1);  // 01/01/2024
+    const fim = new Date(2024, 6, 1);    // 01/07/2024
     expect(calcularMeses(inicio, fim)).toBe(6);
   });
 
   it("deve calcular meses entre anos diferentes", () => {
-    const inicio = new Date("2023-06-01");
-    const fim = new Date("2024-06-01");
+    const inicio = new Date(2023, 5, 1);  // 01/06/2023
+    const fim = new Date(2024, 5, 1);    // 01/06/2024
     expect(calcularMeses(inicio, fim)).toBe(12);
+  });
+
+  it("Bug 4: deve descontar 1 mês quando dia final < dia inicial (mês incompleto)", () => {
+    // Contrato assinado dia 15 de janeiro; calculado no dia 10 de julho
+    // Apenas 5 meses completos se passaram (o 6º mês não fechou)
+    const inicio = new Date(2024, 0, 15); // 15/01/2024
+    const fim = new Date(2024, 6, 10);   // 10/07/2024
+    expect(calcularMeses(inicio, fim)).toBe(5);
   });
 });
 

@@ -9,9 +9,11 @@
  * - Manual de Crédito Rural (MCR) do Banco Central
  */
 
+import { getTaxaLimite, type ModalidadeCredito } from "./limitesLegais";
+
 // ─── Constantes Legais ───────────────────────────────────────────────────────
 
-export const LIMITE_JUROS_REMUNERATORIOS_AA = 12.0; // 12% ao ano - Lei de Usura / STJ
+export const LIMITE_JUROS_REMUNERATORIOS_AA = 12.0; // 12% ao ano - Lei de Usura / STJ (revisão judicial padrão)
 export const LIMITE_JUROS_MORA_AA = 1.0; // 1% ao ano - Decreto-Lei 167/67, art. 5º
 export const LIMITE_MULTA = 2.0; // 2% sobre saldo devedor
 
@@ -95,7 +97,8 @@ export interface ResultadoCalculo {
   jurosMora: number;
   multa: number;
   totalDevido: number;
-  tcrEfetiva: number; // TCR efetiva ao ano
+  tcrEfetiva: number;      // TCR calculada pela fórmula CMN (metodologia normativa)
+  tcrEfetivaTotal?: number; // Custo efetivo total = (totalDevido/principal - 1): inclui mora e multa
   // Conformidade legal
   conformidade: ConformidadeLegal;
   // Memória de cálculo
@@ -152,12 +155,18 @@ export function calcularDiasUteis(dataInicio: Date, dataFim: Date): number {
 }
 
 /**
- * Calcula o número de meses entre duas datas
+ * Calcula o número de meses **completos** entre duas datas.
+ * Considera o dia do mês: se o dia final for anterior ao dia inicial,
+ * desconta 1 mês (o mês ainda não completou).
+ *
+ * Exemplo: 15/01 → 10/07 = 5 meses completos (e não 6).
  */
 export function calcularMeses(dataInicio: Date, dataFim: Date): number {
   const anos = dataFim.getFullYear() - dataInicio.getFullYear();
   const meses = dataFim.getMonth() - dataInicio.getMonth();
-  return anos * 12 + meses;
+  // Se o dia final < dia inicial, o mês corrente ainda não se completou
+  const ajusteDia = dataFim.getDate() < dataInicio.getDate() ? -1 : 0;
+  return anos * 12 + meses + ajusteDia;
 }
 
 /**
@@ -236,12 +245,15 @@ export function calcularTCRPos(dados: DadosFinanciamento): ResultadoCalculo {
   const taxaRemMensal = taxaAnualParaMensal(dados.taxaJurosRemuneratorios);
   const jurosRemuneratorios = saldoDevedorAtualizado * (Math.pow(1 + taxaRemMensal, Math.max(mesesDecorridos, 0)) - 1);
 
-  // Juros de mora (se houver inadimplência)
+  // Juros de mora (se houver inadimplência) — regime composto (capitalização diária)
+  // Fórmula: JM = SD × [(1 + i_diária)^dias - 1]
+  // onde i_diária = (1 + taxa_mora_aa)^(1/365) - 1
+  // Fundamentação: STJ adota regime composto para mora em contratos bancários/rurais
   const diasInadimplencia = calcularDiasCorridos(dataVencimento, dataCalculo);
   let jurosMora = 0;
   if (diasInadimplencia > 0) {
-    const taxaMoraDiaria = dados.taxaJurosMora / 100 / 365;
-    jurosMora = saldoDevedorAtualizado * taxaMoraDiaria * diasInadimplencia;
+    const taxaMoraDiaria = Math.pow(1 + dados.taxaJurosMora / 100, 1 / 365) - 1;
+    jurosMora = saldoDevedorAtualizado * (Math.pow(1 + taxaMoraDiaria, diasInadimplencia) - 1);
   }
 
   // Multa (se houver inadimplência)
@@ -251,13 +263,15 @@ export function calcularTCRPos(dados: DadosFinanciamento): ResultadoCalculo {
   }
 
   const totalDevido = saldoDevedorAtualizado + jurosRemuneratorios + jurosMora + multa;
-  const tcrEfetiva = ((totalDevido / valorPrincipal) - 1) * 100;
+  // tcrEfetivaTotal: mede o custo efetivo total sobre o principal original
+  const tcrEfetivaTotal = ((totalDevido / valorPrincipal) - 1) * 100;
 
-  // Análise de conformidade
+  // Análise de conformidade — usa o limite correto pela modalidade do contrato
   const conformidade = analisarConformidade(
     dados.taxaJurosRemuneratorios,
     dados.taxaJurosMora,
-    tcrPosAA
+    tcrPosAA,
+    dados.modalidade
   );
 
   // Memória de cálculo
@@ -285,7 +299,8 @@ export function calcularTCRPos(dados: DadosFinanciamento): ResultadoCalculo {
     jurosMora,
     multa,
     totalDevido,
-    tcrEfetiva: tcrPosAA,
+    tcrEfetiva: tcrPosAA,        // TCR conforme metodologia CMN (sem JR isolado)
+    tcrEfetivaTotal,              // Custo efetivo total sobre o principal
     conformidade,
     memoriaCalculo,
   };
@@ -319,12 +334,12 @@ export function calcularTCRPre(dados: DadosFinanciamento): ResultadoCalculo {
   // Juros remuneratórios
   const jurosRemuneratorios = saldoDevedorAtualizado - valorPrincipal;
 
-  // Juros de mora
+  // Juros de mora — regime composto (capitalização diária) — mesmo padrão do TCRpós
   const diasInadimplencia = calcularDiasCorridos(dataVencimento, dataCalculo);
   let jurosMora = 0;
   if (diasInadimplencia > 0) {
-    const taxaMoraDiaria = dados.taxaJurosMora / 100 / 365;
-    jurosMora = saldoDevedorAtualizado * taxaMoraDiaria * diasInadimplencia;
+    const taxaMoraDiaria = Math.pow(1 + dados.taxaJurosMora / 100, 1 / 365) - 1;
+    jurosMora = saldoDevedorAtualizado * (Math.pow(1 + taxaMoraDiaria, diasInadimplencia) - 1);
   }
 
   // Multa
@@ -334,13 +349,14 @@ export function calcularTCRPre(dados: DadosFinanciamento): ResultadoCalculo {
   }
 
   const totalDevido = saldoDevedorAtualizado + jurosMora + multa;
-  const tcrEfetiva = ((totalDevido / valorPrincipal) - 1) * 100;
+  const tcrEfetivaTotal = ((totalDevido / valorPrincipal) - 1) * 100;
 
-  // Análise de conformidade
+  // Análise de conformidade — usa o limite correto pela modalidade do contrato
   const conformidade = analisarConformidade(
     dados.taxaJurosRemuneratorios,
     dados.taxaJurosMora,
-    tcrPreAA
+    tcrPreAA,
+    dados.modalidade
   );
 
   // Memória de cálculo
@@ -368,7 +384,8 @@ export function calcularTCRPre(dados: DadosFinanciamento): ResultadoCalculo {
     jurosMora,
     multa,
     totalDevido,
-    tcrEfetiva: tcrPreAA,
+    tcrEfetiva: tcrPreAA,         // TCR conforme metodologia CMN
+    tcrEfetivaTotal,               // Custo efetivo total sobre o principal
     conformidade,
     memoriaCalculo,
   };
@@ -376,10 +393,20 @@ export function calcularTCRPre(dados: DadosFinanciamento): ResultadoCalculo {
 
 // ─── Análise de Conformidade Legal ───────────────────────────────────────────
 
+/**
+ * Analisa a conformidade legal de um contrato de crédito rural.
+ *
+ * @param taxaRemuneratoriaAA  Taxa de juros remuneratórios contratada (% a.a.)
+ * @param taxaMoraAA           Taxa de juros de mora contratada (% a.a.)
+ * @param tcrEfetivaAA         TCR efetiva calculada (% a.a.) — para referência
+ * @param modalidade           Modalidade do crédito (opcional) — determina o limite correto
+ *                             Se omitida, usa 12% a.a. (padrão Lei de Usura / STJ)
+ */
 export function analisarConformidade(
   taxaRemuneratoriaAA: number,
   taxaMoraAA: number,
-  tcrEfetivaAA: number
+  tcrEfetivaAA: number,
+  modalidade?: string
 ): ConformidadeLegal {
   const alertas: string[] = [];
   const fundamentacao: string[] = [];
@@ -387,30 +414,54 @@ export function analisarConformidade(
   let limiteRemuneratorios: "conforme" | "nao_conforme" | "atencao" = "conforme";
   let limiteMora: "conforme" | "nao_conforme" | "atencao" = "conforme";
 
-  // Verificação dos juros remuneratórios
-  if (taxaRemuneratoriaAA > LIMITE_JUROS_REMUNERATORIOS_AA) {
+  // ── Determina o limite legal correto pela modalidade ────────────────────────
+  // MCR 7-1 (Res. CMN 5.234): custeio/comercialização/industrialização = 14% a.a.
+  // MCR 7-6 (Pronaf custeio) = 5% a.a., Pronaf B = 0,5% a.a.
+  // Recursos livres / sem modalidade: STJ aplica 12% a.a. (Decreto 22.626/33)
+  let limiteRemunAA = LIMITE_JUROS_REMUNERATORIOS_AA; // padrão: 12% a.a.
+  let fonteLimite = `${limiteRemunAA}% a.a. (Decreto nº 22.626/33 — Lei de Usura, aplicado pelo STJ como parâmetro de abusividade)`;
+
+  if (modalidade) {
+    try {
+      const { taxa, limite } = getTaxaLimite(modalidade as ModalidadeCredito);
+      limiteRemunAA = taxa;
+      fonteLimite = `${taxa.toFixed(1)}% a.a. (${limite.fundamentacao.mcrSecao} — ${limite.fundamentacao.resolucao})`;
+    } catch {
+      // Modalidade não mapeada: mantém o padrão de 12%
+    }
+  }
+
+  // ── Verificação dos juros remuneratórios ────────────────────────────────────
+  if (taxaRemuneratoriaAA > limiteRemunAA) {
     limiteRemuneratorios = "nao_conforme";
     alertas.push(
-      `ATENÇÃO: Taxa de juros remuneratórios de ${taxaRemuneratoriaAA.toFixed(2)}% a.a. EXCEDE o limite legal de ${LIMITE_JUROS_REMUNERATORIOS_AA}% a.a. estabelecido pela jurisprudência do STJ (Decreto nº 22.626/33 - Lei de Usura).`
+      `ATENÇÃO: Taxa de juros remuneratórios de ${taxaRemuneratoriaAA.toFixed(2)}% a.a. EXCEDE o limite legal de ${fonteLimite}.`
     );
-    fundamentacao.push(
-      "Decreto nº 22.626/33 (Lei de Usura) - Art. 1º: limite de 12% ao ano para juros remuneratórios na ausência de autorização do CMN."
-    );
-    fundamentacao.push(
-      "STJ - Súmula e jurisprudência consolidada: ausência de deliberação do CMN implica aplicação do limite de 12% ao ano para cédulas de crédito rural."
-    );
-  } else if (taxaRemuneratoriaAA > LIMITE_JUROS_REMUNERATORIOS_AA * 0.9) {
+    if (limiteRemunAA === LIMITE_JUROS_REMUNERATORIOS_AA) {
+      fundamentacao.push(
+        "Decreto nº 22.626/33 (Lei de Usura) - Art. 1º: limite de 12% ao ano para juros remuneratórios na ausência de autorização do CMN."
+      );
+      fundamentacao.push(
+        "STJ - Súmula e jurisprudência consolidada: ausência de deliberação do CMN implica aplicação do limite de 12% ao ano para cédulas de crédito rural."
+      );
+    } else {
+      fundamentacao.push(`Limite legal estabelecido pelo ${fonteLimite}.`);
+      fundamentacao.push(
+        "A cobrança acima deste limite é ilegal e passível de revisão judicial com devolução em dobro (CDC, art. 42, parágrafo único)."
+      );
+    }
+  } else if (taxaRemuneratoriaAA > limiteRemunAA * 0.9) {
     limiteRemuneratorios = "atencao";
     alertas.push(
-      `ATENÇÃO: Taxa de juros remuneratórios de ${taxaRemuneratoriaAA.toFixed(2)}% a.a. está próxima do limite legal de ${LIMITE_JUROS_REMUNERATORIOS_AA}% a.a.`
+      `ATENÇÃO: Taxa de juros remuneratórios de ${taxaRemuneratoriaAA.toFixed(2)}% a.a. está próxima do limite legal de ${fonteLimite}.`
     );
   } else {
     fundamentacao.push(
-      `Taxa de juros remuneratórios de ${taxaRemuneratoriaAA.toFixed(2)}% a.a. está em conformidade com o limite de ${LIMITE_JUROS_REMUNERATORIOS_AA}% a.a. (Decreto nº 22.626/33).`
+      `Taxa de juros remuneratórios de ${taxaRemuneratoriaAA.toFixed(2)}% a.a. está em conformidade com o limite de ${fonteLimite}.`
     );
   }
 
-  // Verificação dos juros de mora
+  // ── Verificação dos juros de mora ───────────────────────────────────────────
   if (taxaMoraAA > LIMITE_JUROS_MORA_AA) {
     limiteMora = "nao_conforme";
     alertas.push(
@@ -755,7 +806,7 @@ export function calcularAnaliseParcelas(
   };
 
   const pmtContrato = calcPMT(valorPrincipal, taxaContratoPeriodo, numeroParcelas);
-  const pmtLegal    = calcPMT(valorPrincipal, taxaLegalPeriodo, numeroParcelas);
+  const pmtLegal = calcPMT(valorPrincipal, taxaLegalPeriodo, numeroParcelas);
 
   // ── 3. Tabela de amortização parcela a parcela (Price) ───────────────────────
   // Para cada parcela k:
@@ -764,7 +815,7 @@ export function calcularAnaliseParcelas(
   //   SD_k          = SD_{k-1} - Amortização_k
   const tabelaAmortizacao: LinhaTabelaAmortizacao[] = [];
   let sdContrato = valorPrincipal;
-  let sdLegal    = valorPrincipal;
+  let sdLegal = valorPrincipal;
 
   for (let k = 1; k <= Math.max(numeroParcelas, parcelasPagas); k++) {
     // Contrato
@@ -797,15 +848,15 @@ export function calcularAnaliseParcelas(
     });
 
     sdContrato = sdFinal_c;
-    sdLegal    = sdFinal_l;
+    sdLegal = sdFinal_l;
   }
 
   // ── 4. Totais das parcelas pagas ─────────────────────────────────────────────
   const parcelasAnalisadas = tabelaAmortizacao.slice(0, parcelasPagas);
-  const totalPagoContrato  = parcelasAnalisadas.reduce((s, p) => s + p.prestacao, 0);
-  const totalLegal         = parcelasAnalisadas.reduce((s, p) => s + p.prestacao_legal, 0);
-  const excessoPago        = Math.max(0, totalPagoContrato - totalLegal);
-  const percentualExcesso  = totalLegal > 0 ? (excessoPago / totalLegal) * 100 : 0;
+  const totalPagoContrato = parcelasAnalisadas.reduce((s, p) => s + p.prestacao, 0);
+  const totalLegal = parcelasAnalisadas.reduce((s, p) => s + p.prestacao_legal, 0);
+  const excessoPago = Math.max(0, totalPagoContrato - totalLegal);
+  const percentualExcesso = totalLegal > 0 ? (excessoPago / totalLegal) * 100 : 0;
 
   // ── 5. Saldo devedor revisado após N parcelas (pela taxa legal) ──────────────
   // Calculado diretamente da tabela de amortização (mais preciso que a fórmula fechada)
@@ -813,7 +864,8 @@ export function calcularAnaliseParcelas(
     ? tabelaAmortizacao[parcelasPagas - 1].saldoFinal_legal
     : valorPrincipal;
 
-  const diferencaSaldo = Math.max(0, saldoDevedorBanco - saldoDevedorRevisado);
+  // Preserva o sinal: valor positivo = banco cobra a mais; negativo = banco deve ao produtor
+  const diferencaSaldo = saldoDevedorBanco - saldoDevedorRevisado;
 
   // ── 6. Memória de cálculo detalhada ─────────────────────────────────────────
   const memoriaCalculo = [
